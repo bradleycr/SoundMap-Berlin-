@@ -107,6 +107,7 @@ export function AudioRecorder() {
         data: { session },
       } = await supabase.auth.getSession()
       const user = session?.user
+      if (!user) throw new Error("User not authenticated for upload.")
 
       // Filename and path
       const ext = processedBlob.type === "audio/webm" ? "webm" : "wav"
@@ -128,6 +129,7 @@ export function AudioRecorder() {
 
       // Insert metadata into `clips` table
       const { error: insertError } = await supabase.from("clips").insert({
+        owner: user.id,
         title: title.trim() || "Untitled",
         lat: location.lat,
         lng: location.lng,
