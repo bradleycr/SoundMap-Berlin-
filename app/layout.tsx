@@ -68,9 +68,6 @@ export default function RootLayout({
         <meta name="msapplication-TileColor" content="#2d2a26" />
         <meta name="theme-color" content="#2d2a26" />
 
-        {/* Preload critical resources */}
-        <link rel="preload" href="/manifest.json" as="fetch" crossOrigin="anonymous" />
-
         {/* Service Worker Registration */}
         <script
           dangerouslySetInnerHTML={{

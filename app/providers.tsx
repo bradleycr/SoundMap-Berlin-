@@ -328,7 +328,20 @@ export function Providers({ children }: { children: React.ReactNode }) {
           setUser(session.user)
           await getProfile(session.user.id)
 
-          // Handle successful OAuth sign-in
+          // Handle successful email verification (signup)
+          if (event === "SIGNED_IN" && session.user.email_confirmed_at && !session.user.app_metadata.provider) {
+            console.log("✅ Email verification successful")
+            await createProfile({
+              id: session.user.id,
+              name: session.user.user_metadata?.display_name || 
+                    session.user.email?.split("@")[0] || 
+                    "User",
+              email: session.user.email,
+              anonymous: false,
+            })
+          }
+
+          // Handle successful OAuth sign-in (Google, etc.)
           if (event === "SIGNED_IN" && session.user.app_metadata.provider === "google") {
             console.log("✅ Google sign-in successful")
             await createProfile({
@@ -342,6 +355,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
               anonymous: false,
             })
           }
+
+          // Handle password recovery flow
+          if (event === "PASSWORD_RECOVERY") {
+            console.log("🔑 Password recovery flow initiated")
+          }
+
+          // Handle token refresh
+          if (event === "TOKEN_REFRESHED") {
+            console.log("🔄 Token refreshed successfully")
+          }
+
         } else if (event === "SIGNED_OUT") {
           setUser(null)
           setProfile(null)

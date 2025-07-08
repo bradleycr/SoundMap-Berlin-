@@ -285,6 +285,37 @@
       transform: scale(1.05);
     }
   }
+
+  .animate-logo-pulse {
+    animation: logo-pulse 3.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes logo-pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+      filter: drop-shadow(0 0 16px #a8b5a0) drop-shadow(0 0 32px #d4a574);
+      color: #a8b5a0;
+    }
+    20% {
+      opacity: 0.92;
+      transform: scale(1.04);
+      filter: drop-shadow(0 0 24px #d4a574) drop-shadow(0 0 48px #c49a7b);
+      color: #d4a574;
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(1.08);
+      filter: drop-shadow(0 0 32px #c49a7b) drop-shadow(0 0 64px #a8b5a0);
+      color: #c49a7b;
+    }
+    80% {
+      opacity: 0.92;
+      transform: scale(1.04);
+      filter: drop-shadow(0 0 24px #d4a574) drop-shadow(0 0 48px #c49a7b);
+      color: #d4a574;
+    }
+  }
 }
 
 /* PWA specific styles */

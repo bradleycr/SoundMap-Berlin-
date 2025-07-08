@@ -3,11 +3,12 @@
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Mic, StopCircle, Save, Trash2, Loader2, PartyPopper, Ear, Map } from "lucide-react"
+import { Mic, StopCircle, Save, Trash2, Loader2, PartyPopper, Ear, Map, LogIn } from "lucide-react"
 import { createClient } from "@/lib/supabase"
 import { validateAudioFile, compressAudio } from "@/lib/audio-utils"
 import { getCurrentLocation } from "@/lib/geolocation"
 import { AudioPlayer } from "@/components/audio-player"
+import { useAuth } from "@/app/providers"
 import { v4 as uuidv4 } from "uuid"
 import { toast } from "sonner"
 import { WaveformVisualizer } from "./waveform-visualizer"
@@ -18,10 +19,12 @@ const MAX_RECORDING_SECONDS = 60
  * AudioRecorder
  * A full-featured recorder component that captures audio with the MediaRecorder API,
  * validates/compresses it, uploads to Supabase Storage, and saves metadata to the `clips` table.
+ * Now includes proper authentication handling and database field mapping.
  */
 export function AudioRecorder() {
   const router = useRouter()
   const supabase = createClient()
+  const { user, signInAnonymously } = useAuth()
 
   // ─── Local state ────────────────────────────────────────────────────────────
   const [isRecording, setIsRecording] = useState(false)
@@ -32,6 +35,7 @@ export function AudioRecorder() {
   const [isUploading, setIsUploading] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState(false)
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false)
 
   // ─── MediaRecorder refs ────────────────────────────────────────────────────
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -94,6 +98,25 @@ export function AudioRecorder() {
   // ─── Upload logic ──────────────────────────────────────────────────────────
   const uploadRecording = async () => {
     if (!recordedBlob) return
+
+    // Ensure we have a user before uploading
+    if (!user) {
+      console.log("🔐 No user found, attempting anonymous sign-in...")
+      try {
+        await signInAnonymously()
+      } catch (error) {
+        console.error("❌ Anonymous sign-in failed:", error)
+        setShowAuthPrompt(true)
+        return
+      }
+    }
+
+    // Validate title is provided
+    if (!title.trim()) {
+      toast.error("Please enter a title for your clip")
+      return
+    }
+
     setIsUploading(true)
 
     // Add timeout wrapper to prevent infinite hanging
@@ -127,7 +150,7 @@ export function AudioRecorder() {
         const filename = `clip-${timestamp}.webm`
         console.log("📁 Filename:", filename)
 
-        // Upload to Supabase
+        // Upload to Supabase Storage
         console.log("☁️ Starting Supabase upload...")
         console.log("🔍 Supabase client config check...")
         console.log("- URL:", process.env.NEXT_PUBLIC_SUPABASE_URL)
@@ -154,27 +177,55 @@ export function AudioRecorder() {
 
         console.log("✅ Upload successful:", data)
 
-        // Save metadata to database
-        const { error: dbError } = await supabase.from("audio_clips").insert({
-          filename: data.path,
-          latitude: location.latitude,
-          longitude: location.longitude,
-          duration: validation.duration || 0,
+        // Generate the public URL for the uploaded file
+        const { data: { publicUrl } } = supabase.storage.from("clips").getPublicUrl(data.path)
+
+        // Save metadata to database with correct table name and fields
+        const clipData = {
+          title: title.trim(),
+          lat: location.latitude,
+          lng: location.longitude,
+          radius: radius,
+          url: publicUrl,
+          owner: user?.user_metadata?.anonymous ? null : user?.id, // Set owner to null for anonymous users
           created_at: new Date().toISOString(),
-        })
+        }
+
+        console.log("💾 Saving clip metadata:", clipData)
+
+        const { error: dbError } = await supabase.from("clips").insert(clipData)
 
         if (dbError) {
           console.error("❌ Database error:", dbError)
+          // If it's an authentication error, show auth prompt
+          if (dbError.message.includes('authentication') || dbError.message.includes('permission')) {
+            setShowAuthPrompt(true)
+            setIsUploading(false)
+            return
+          }
           throw dbError
         }
 
         console.log("✅ Database entry created")
         toast.success("Recording uploaded successfully!")
+        setTitle("")
         setRecordedBlob(null)
+        setUploadSuccess(true)
         setIsUploading(false)
       } catch (error) {
         console.error("❌ Upload failed:", error)
-        toast.error("Upload failed. Please try again.")
+        
+        // Handle specific error types
+        if (error instanceof Error) {
+          if (error.message.includes('authentication') || error.message.includes('permission')) {
+            setShowAuthPrompt(true)
+            toast.error("Authentication required. Please sign in to upload clips.")
+          } else {
+            toast.error(`Upload failed: ${error.message}`)
+          }
+        } else {
+          toast.error("Upload failed. Please try again.")
+        }
         setIsUploading(false)
       }
     }
@@ -196,6 +247,11 @@ export function AudioRecorder() {
   const resetRecorderState = () => {
     setRecordedBlob(null)
     setUploadSuccess(false)
+    setTitle("")
+  }
+
+  const handleSignInPrompt = () => {
+    router.push('/profile')
   }
 
   // ─── Cleanup on unmount ────────────────────────────────────────────────────
@@ -211,7 +267,29 @@ export function AudioRecorder() {
 
   // ─── UI Rendering ──────────────────────────────────────────────────────────
 
-  // 1. Success State
+  // 1. Authentication Prompt State
+  if (showAuthPrompt) {
+    return (
+      <div className="space-y-6 max-w-md mx-auto w-full text-center">
+        <LogIn className="w-16 h-16 text-coral-400 mx-auto" />
+        <h2 className="text-xl font-pixel text-coral-400">AUTHENTICATION REQUIRED</h2>
+        <p className="text-sm font-pixel text-stone-400">
+          To upload audio clips, you need to sign in. This helps prevent spam and lets you manage your recordings.
+        </p>
+        <div className="flex gap-2 justify-center pt-4">
+          <Button onClick={handleSignInPrompt} className="pixel-button-mint">
+            <LogIn className="w-4 h-4 mr-2" />
+            SIGN IN
+          </Button>
+          <Button onClick={() => setShowAuthPrompt(false)} className="pixel-button-sand">
+            GO BACK
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // 2. Success State
   if (uploadSuccess) {
     return (
       <div className="space-y-6 max-w-md mx-auto w-full text-center">
@@ -232,7 +310,7 @@ export function AudioRecorder() {
     )
   }
 
-  // 2. Preview & Upload State
+  // 3. Preview & Upload State
   if (recordedBlob) {
     return (
       <div className="space-y-4 max-w-md mx-auto w-full">
@@ -246,6 +324,7 @@ export function AudioRecorder() {
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Clip title (e.g., 'Sounds of the U-Bahn')"
             className="w-full px-3 py-2 retro-border bg-stone-800 text-sm font-pixel placeholder-stone-500 focus:outline-none"
+            required
           />
           <div className="flex items-center gap-2 text-xs font-pixel text-stone-400">
             <span>PLAYABLE RADIUS</span>
@@ -275,7 +354,11 @@ export function AudioRecorder() {
             <Trash2 className="w-4 h-4 mr-2" />
             RETAKE
           </Button>
-          <Button onClick={uploadRecording} className="pixel-button-mint" disabled={isUploading}>
+          <Button 
+            onClick={uploadRecording} 
+            className="pixel-button-mint" 
+            disabled={isUploading || !title.trim()}
+          >
             {isUploading ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
@@ -284,11 +367,18 @@ export function AudioRecorder() {
             {isUploading ? "UPLOADING…" : "SAVE CLIP"}
           </Button>
         </div>
+
+        {/* User status indicator */}
+        {user && (
+          <div className="text-center text-xs font-pixel text-stone-500">
+            {user.user_metadata?.anonymous ? "UPLOADING AS ANONYMOUS USER" : `UPLOADING AS ${user.email}`}
+          </div>
+        )}
       </div>
     )
   }
 
-  // 3. Default/Recording State
+  // 4. Default/Recording State
   return (
     <div className="flex flex-col items-center justify-center space-y-8 w-full text-center">
       {/* Button and Visualizer Area */}

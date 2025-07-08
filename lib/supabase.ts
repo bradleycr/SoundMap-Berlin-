@@ -8,6 +8,47 @@ function debugSupabaseConfig() {
   return { url, key }
 }
 
+/**
+ * Get the appropriate site URL based on environment
+ * Production: Uses NEXT_PUBLIC_SITE_URL or Vercel URL
+ * Development: Uses localhost:3000
+ */
+export function getSiteUrl(): string {
+  // For client-side, use window.location.origin if available
+  if (typeof window !== 'undefined') {
+    return window.location.origin
+  }
+
+  // For server-side, check environment variables
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+  const vercelUrl = process.env.NEXT_PUBLIC_VERCEL_URL
+  
+  if (siteUrl) {
+    return siteUrl
+  }
+  
+  if (vercelUrl) {
+    return `https://${vercelUrl}`
+  }
+  
+  // Fallback to localhost for development
+  return 'http://localhost:3000'
+}
+
+/**
+ * Get the auth callback URL for email verification and OAuth
+ */
+export function getAuthCallbackUrl(): string {
+  return `${getSiteUrl()}/auth/callback`
+}
+
+/**
+ * Get environment-appropriate redirect URLs for password reset
+ */
+export function getPasswordResetUrl(): string {
+  return `${getSiteUrl()}/auth/callback`
+}
+
 export function createClient() {
   // Use the new Supabase configuration
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://rwtvjimthxlnufmnyzbf.supabase.co"
@@ -23,6 +64,15 @@ export function createClient() {
 
   try {
     const client = createBrowserClient(supabaseUrl, supabaseAnonKey)
+    
+    // Log configuration in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log("🔧 Supabase Config:")
+      console.log("- URL:", supabaseUrl)
+      console.log("- Site URL:", getSiteUrl())
+      console.log("- Auth Callback:", getAuthCallbackUrl())
+    }
+    
     return client
   } catch (error) {
     console.error("❌ Failed to create Supabase client:", error)
