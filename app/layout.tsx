@@ -17,7 +17,6 @@ export const metadata: Metadata = {
   title: "SoundMap - Audio Social Map",
   description: "Audio-only social sound map for Berlin. Headphones on, walk, discover.",
   manifest: "/manifest.json",
-  themeColor: "#2d2a26",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -59,9 +58,9 @@ export default function RootLayout({
     <html lang="en" className={pressStart2P.variable}>
       <head>
         {/* PWA Icons */}
-        <link rel="apple-touch-icon" href="/icon-192.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png" />
+        <link rel="apple-touch-icon" href="/placeholder-logo.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/placeholder-logo.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/placeholder-logo.png" />
 
         {/* PWA Metadata */}
         <meta name="apple-mobile-web-app-title" content="SoundMap" />

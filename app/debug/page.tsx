@@ -7,6 +7,8 @@ import { useAuth } from "../providers"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Database, User, Wifi, AlertCircle, CheckCircle } from "lucide-react"
 
+export const dynamic = 'force-dynamic'
+
 export default function DebugPage() {
   const { user, profile, debugAuthState } = useAuth()
   const router = useRouter()

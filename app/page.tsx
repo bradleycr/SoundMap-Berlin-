@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "./providers"
 import { Button } from "@/components/ui/button"
 
+// Disable static prerendering – always render on demand
+export const dynamic = 'force-dynamic'
+
 export default function HomePage() {
   const { user, signInAnonymously, loading } = useAuth()
   const router = useRouter()
@@ -45,7 +48,7 @@ export default function HomePage() {
       const permissions = await Promise.allSettled([
         // Location permission
         new Promise<void>((resolve, reject) => {
-          if ("geolocation" in navigator) {
+          if (typeof window !== 'undefined' && "geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(
               () => resolve(),
               () => resolve(), // Don't block on location denial

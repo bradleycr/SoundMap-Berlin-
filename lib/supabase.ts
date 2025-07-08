@@ -5,11 +5,6 @@ function debugSupabaseConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  console.log("🔧 Supabase Configuration Debug:")
-  console.log("URL:", url ? `${url.substring(0, 30)}...` : "❌ MISSING")
-  console.log("Key:", key ? `${key.substring(0, 30)}...` : "❌ MISSING")
-  console.log("Full URL:", url)
-
   return { url, key }
 }
 
@@ -20,11 +15,6 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ3dHZqaW10aHhsbnVmbW55emJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5Njk5NTMsImV4cCI6MjA2NzU0NTk1M30.ZynRZDO8rTlLxgqERh3Wx-VID2wDbbHkbpgneN-WRYE"
 
-  // Debug configuration in development
-  if (process.env.NODE_ENV === "development") {
-    debugSupabaseConfig()
-  }
-
   // Validate configuration
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error("❌ Supabase configuration missing!")
@@ -33,7 +23,6 @@ export function createClient() {
 
   try {
     const client = createBrowserClient(supabaseUrl, supabaseAnonKey)
-    console.log("✅ Supabase client created successfully with new database")
     return client
   } catch (error) {
     console.error("❌ Failed to create Supabase client:", error)

@@ -10,7 +10,7 @@ interface AuthContextType {
   profile: any | null
   loading: boolean
   signInAnonymously: () => Promise<void>
-  signInWithGoogle: () => Promise<void>
+  // signInWithGoogle: () => Promise<void>  // Disabled for now
   signOut: () => Promise<void>
   createProfile: (userData?: any) => Promise<void>
   debugAuthState: () => void
@@ -21,7 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   signInAnonymously: async () => {},
-  signInWithGoogle: async () => {},
+  // signInWithGoogle: async () => {}, // Disabled for now
   signOut: async () => {},
   createProfile: async () => {},
   debugAuthState: () => {},
@@ -49,13 +49,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
     return deviceId
   }
 
-  /**
-   * Modern Google Sign-In with proper OAuth flow
-   * Uses PKCE for security and handles redirects properly
-   */
+  // Commented out Google OAuth for now - requires complex setup
+  /*
   const signInWithGoogle = async () => {
     try {
-      console.log("🔐 Starting Google OAuth flow...")
+      console.log("🔗 Initiating Google OAuth flow...")
 
       // Get the current URL for redirect
       const redirectUrl = `${window.location.origin}/auth/callback`
@@ -87,6 +85,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       throw error
     }
   }
+  */
 
   /**
    * Anonymous sign-in for quick start
@@ -264,10 +263,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const initializeAuth = async () => {
+      const FALLBACK_TIMEOUT = 8000 // ms
+      // In case the Supabase request hangs we still want to render the UI
+      const timeoutId = setTimeout(() => {
+        console.warn("⚠️  Supabase session request timed-out – continuing offline");
+        setLoading(false)
+      }, FALLBACK_TIMEOUT)
+
       try {
         console.log("🔄 Initializing auth with new database...")
 
-        // Check for existing session
+        // Check for existing session with a race against our fallback timeout
         const {
           data: { session },
           error,
@@ -304,6 +310,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.warn("⚠️ Auth initialization error:", error)
       } finally {
+        clearTimeout(timeoutId)
         setLoading(false)
       }
     }
@@ -354,7 +361,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         profile,
         loading,
         signInAnonymously,
-        signInWithGoogle,
+        // signInWithGoogle,  // Disabled for now
         signOut,
         createProfile,
         debugAuthState,

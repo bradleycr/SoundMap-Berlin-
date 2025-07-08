@@ -40,8 +40,10 @@ interface Clip {
 
 type TabType = "recorded" | "liked" | "archived"
 
+export const dynamic = 'force-dynamic'
+
 export default function ProfilePage() {
-  const { user, profile, signInAnonymously, signInWithGoogle, signOut, createProfile } = useAuth()
+  const { user, profile, signInAnonymously, /* signInWithGoogle, */ signOut, createProfile } = useAuth()
   const router = useRouter()
   const supabase = createClient()
   const storage = OfflineStorage.getInstance()
@@ -52,7 +54,7 @@ export default function ProfilePage() {
   const [likedClips, setLikedClips] = useState<Clip[]>([])
   const [archivedClips, setArchivedClips] = useState<Clip[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isOnline, setIsOnline] = useState(navigator.onLine)
+  const [isOnline, setIsOnline] = useState(true) // Default to true, will be updated in useEffect
   const [showAuthForm, setShowAuthForm] = useState(false)
   const [authMode, setAuthMode] = useState<"login" | "signup">("login")
   const [email, setEmail] = useState("")
@@ -62,8 +64,17 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
   const [authLoading, setAuthLoading] = useState(false)
 
+  // Safely initialize online status in the browser
+  useEffect(() => {
+    if (typeof window !== 'undefined' && navigator) {
+      setIsOnline(navigator.onLine)
+    }
+  }, [])
+
   // Monitor online status
   useEffect(() => {
+    if (typeof window === 'undefined') return
+
     const handleOnline = () => setIsOnline(true)
     const handleOffline = () => setIsOnline(false)
 
@@ -179,6 +190,8 @@ export default function ProfilePage() {
     }
   }
 
+  // Commented out Google sign-in for now
+  /*
   const handleGoogleSignIn = async () => {
     setAuthLoading(true)
     try {
@@ -192,6 +205,7 @@ export default function ProfilePage() {
       setAuthLoading(false)
     }
   }
+  */
 
   const handleAuth = async () => {
     if (!email || !password) {
@@ -469,6 +483,8 @@ export default function ProfilePage() {
             </div>
 
             {/* Modern Google Sign-In Button */}
+            {/* Google Sign-In temporarily disabled */}
+            {/*
             <Button
               onClick={handleGoogleSignIn}
               disabled={authLoading}
@@ -505,6 +521,7 @@ export default function ProfilePage() {
             </Button>
 
             <div className="text-center text-xs font-pixel text-stone-500">OR</div>
+            */}
 
             <div className="space-y-3">
               <div className="space-y-2">

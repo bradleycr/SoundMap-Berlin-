@@ -3,7 +3,9 @@ import withPWA from 'next-pwa'
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    serverComponentsExternalPackages: ['@supabase/supabase-js']
+    serverComponentsExternalPackages: ['@supabase/supabase-js'],
+    // Opt-out of automatic vendor-chunk extraction that broke the build
+    optimizePackageImports: [],
   },
   eslint: {
     ignoreDuringBuilds: true,

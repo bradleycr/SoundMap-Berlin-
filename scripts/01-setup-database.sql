@@ -53,12 +53,23 @@ CREATE POLICY "Users can update their own profile" ON public.profiles FOR UPDATE
 
 -- POLICIES FOR CLIPS TABLE
 CREATE POLICY "Anyone can view clips" ON public.clips FOR SELECT USING (true);
-CREATE POLICY "Authenticated users can insert their own clips" ON public.clips FOR INSERT WITH CHECK (auth.uid() = owner);
+CREATE POLICY "Allow clip inserts for anonymous and authenticated users" ON public.clips FOR INSERT WITH CHECK ( (auth.role() = 'authenticated' AND auth.uid() = owner) OR (auth.role() = 'anon' AND owner IS NULL) );
 CREATE POLICY "Users can update their own clips" ON public.clips FOR UPDATE USING (auth.uid() = owner);
 CREATE POLICY "Users can delete their own clips" ON public.clips FOR DELETE USING (auth.uid() = owner);
 
 -- POLICIES FOR STORAGE (for the 'clips' bucket)
 CREATE POLICY "Anyone can view files in the clips bucket" ON storage.objects FOR SELECT USING (bucket_id = 'clips');
-CREATE POLICY "Authenticated users can upload clips" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'clips' AND auth.role() = 'authenticated');
+CREATE POLICY "Allow storage uploads for anonymous and authenticated users" ON storage.objects FOR INSERT WITH CHECK ( bucket_id = 'clips' AND (auth.role() = 'authenticated' OR auth.role() = 'anon') );
 CREATE POLICY "Users can update their own clips" ON storage.objects FOR UPDATE USING (bucket_id = 'clips' AND auth.uid() = owner);
 CREATE POLICY "Users can delete their own clips" ON storage.objects FOR DELETE USING (bucket_id = 'clips' AND auth.uid() = owner);
+
+-- Create the 'clips' storage bucket
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'clips',
+  'clips',
+  true,
+  5242880, -- 5MB limit
+  ARRAY['audio/webm', 'audio/wav', 'audio/mp3', 'audio/aac', 'audio/ogg']
+)
+ON CONFLICT (id) DO NOTHING;

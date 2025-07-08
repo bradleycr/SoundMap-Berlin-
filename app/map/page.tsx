@@ -8,6 +8,8 @@ import { BerlinMap } from "@/components/berlin-map"
 import { getCurrentLocation } from "@/lib/geolocation"
 import { ArrowLeft, MapPin, Volume2 } from "lucide-react"
 
+export const dynamic = 'force-dynamic'
+
 interface Clip {
   id: string
   title: string

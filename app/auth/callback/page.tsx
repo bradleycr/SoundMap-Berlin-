@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase"
 
+export const dynamic = 'force-dynamic'
+
 /**
  * OAuth Callback Handler
  * Handles the redirect from Google OAuth and processes the auth code

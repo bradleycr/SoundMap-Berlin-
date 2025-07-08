@@ -61,11 +61,13 @@ export async function retryRequest<T>(requestFn: () => Promise<T>, options: Retr
  */
 export class NetworkMonitor {
   private listeners: ((online: boolean) => void)[] = []
-  private _isOnline = navigator.onLine
+  private _isOnline = typeof window !== 'undefined' && navigator ? navigator.onLine : true
 
   constructor() {
-    window.addEventListener("online", this.handleOnline)
-    window.addEventListener("offline", this.handleOffline)
+    if (typeof window !== 'undefined') {
+      window.addEventListener("online", this.handleOnline)
+      window.addEventListener("offline", this.handleOffline)
+    }
   }
 
   get isOnline() {
@@ -115,8 +117,10 @@ export class NetworkMonitor {
   }
 
   destroy() {
-    window.removeEventListener("online", this.handleOnline)
-    window.removeEventListener("offline", this.handleOffline)
+    if (typeof window !== 'undefined') {
+      window.removeEventListener("online", this.handleOnline)
+      window.removeEventListener("offline", this.handleOffline)
+    }
     this.listeners = []
   }
 }
@@ -141,9 +145,11 @@ export class OfflineQueue {
     this.loadFromStorage()
 
     // Process queue when coming online
-    window.addEventListener("online", () => {
-      this.processQueue()
-    })
+    if (typeof window !== 'undefined') {
+      window.addEventListener("online", () => {
+        this.processQueue()
+      })
+    }
   }
 
   /**
@@ -162,7 +168,7 @@ export class OfflineQueue {
     this.saveToStorage()
 
     // Try to process immediately if online
-    if (navigator.onLine) {
+    if (typeof window !== 'undefined' && navigator?.onLine) {
       this.processQueue()
     }
   }
@@ -171,7 +177,7 @@ export class OfflineQueue {
    * Process all queued operations
    */
   async processQueue() {
-    if (this.isProcessing || !navigator.onLine) return
+    if (this.isProcessing || (typeof window !== 'undefined' && !navigator?.onLine)) return
 
     this.isProcessing = true
 
@@ -245,6 +251,6 @@ export class OfflineQueue {
   }
 }
 
-// Global instances
-export const networkMonitor = new NetworkMonitor()
-export const offlineQueue = new OfflineQueue()
+// Global instances - only create in browser environment
+export const networkMonitor = typeof window !== 'undefined' ? new NetworkMonitor() : null
+export const offlineQueue = typeof window !== 'undefined' ? new OfflineQueue() : null

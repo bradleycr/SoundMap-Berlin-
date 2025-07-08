@@ -11,6 +11,8 @@ import { OfflineStorage } from "@/lib/storage"
 import { Heart, X, SkipForward, ArrowLeft, Map, Wifi, WifiOff, User } from "lucide-react"
 import { getCurrentLocation, watchLocation } from "@/lib/geolocation"
 
+export const dynamic = 'force-dynamic'
+
 interface Clip {
   id: string
   title: string
@@ -39,11 +41,20 @@ export default function WalkPage() {
   const [userDislikes, setUserDislikes] = useState<string[]>([])
   const [showMap, setShowMap] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
-  const [isOnline, setIsOnline] = useState(navigator.onLine)
+  const [isOnline, setIsOnline] = useState(true) // Default to true, will be updated in useEffect
   const watchIdRef = useRef<number | null>(null)
+
+  // Safely initialize online status in the browser
+  useEffect(() => {
+    if (typeof window !== 'undefined' && navigator) {
+      setIsOnline(navigator.onLine)
+    }
+  }, [])
 
   // Monitor online status
   useEffect(() => {
+    if (typeof window === 'undefined') return
+
     const handleOnline = () => setIsOnline(true)
     const handleOffline = () => setIsOnline(false)
 
@@ -103,7 +114,7 @@ export default function WalkPage() {
     }
 
     return () => {
-      if (watchIdRef.current) {
+      if (watchIdRef.current && typeof window !== 'undefined' && navigator?.geolocation) {
         navigator.geolocation.clearWatch(watchIdRef.current)
       }
     }
