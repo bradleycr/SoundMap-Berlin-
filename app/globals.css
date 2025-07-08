@@ -1,0 +1,303 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-pixel: "Press Start 2P", monospace;
+    --background: 210 40% 98%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    height: 100%;
+    overflow-x: hidden;
+    /* Prevent zoom on input focus */
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+  }
+
+  body {
+    height: 100%;
+    font-family: var(--font-pixel);
+    background: #2d2a26;
+    color: #a8b5a0;
+    /* Prevent pull-to-refresh */
+    overscroll-behavior-y: contain;
+    /* Smooth scrolling */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent text selection on UI elements */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Allow text selection in inputs and content areas */
+  input,
+  textarea,
+  [contenteditable] {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+
+  /* Prevent zoom on input focus on iOS */
+  input[type="text"],
+  input[type="email"],
+  input[type="search"],
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Hide scrollbars but keep functionality */
+  ::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+  }
+}
+
+@layer components {
+  .pixel-button {
+    @apply bg-stone-800 border-2 border-sage-400 text-sage-400 px-6 py-3 rounded-lg font-pixel text-sm uppercase tracking-wider transition-all duration-200 hover:bg-sage-400 hover:text-stone-900 hover:shadow-lg hover:shadow-sage-400/50 active:scale-95 touch-manipulation;
+    /* Prevent double-tap zoom */
+    touch-action: manipulation;
+    /* Better tap targets */
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .pixel-button-coral {
+    @apply bg-stone-800 border-2 border-coral-400 text-coral-400 px-6 py-3 rounded-lg font-pixel text-sm uppercase tracking-wider transition-all duration-200 hover:bg-coral-400 hover:text-stone-900 hover:shadow-lg hover:shadow-coral-400/50 active:scale-95 touch-manipulation;
+    touch-action: manipulation;
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .pixel-button-mint {
+    @apply bg-stone-800 border-2 border-mint-400 text-mint-400 px-6 py-3 rounded-lg font-pixel text-sm uppercase tracking-wider transition-all duration-200 hover:bg-mint-400 hover:text-stone-900 hover:shadow-lg hover:shadow-mint-400/50 active:scale-95 touch-manipulation;
+    touch-action: manipulation;
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .pixel-button-sand {
+    @apply bg-stone-800 border-2 border-sand-400 text-sand-400 px-6 py-3 rounded-lg font-pixel text-sm uppercase tracking-wider transition-all duration-200 hover:bg-sand-400 hover:text-stone-900 hover:shadow-lg hover:shadow-sand-400/50 active:scale-95 touch-manipulation;
+    touch-action: manipulation;
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .scanline-hover {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scanline-hover::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(168, 181, 160, 0.3), transparent);
+    transition: left 0.5s;
+  }
+
+  .scanline-hover:active::before {
+    left: 100%;
+  }
+
+  .neon-glow {
+    box-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+    text-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+
+  .retro-border {
+    border: 2px solid;
+    border-image: linear-gradient(45deg, #a8b5a0, #d4a574, #c49a7b, #a8b5a0) 1;
+  }
+
+  /* Enhanced backdrop blur support */
+  .backdrop-blur-sm {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  /* Mobile-optimized audio controls */
+  audio {
+    width: 100%;
+    height: 40px;
+    background: #2d2a26;
+    border-radius: 8px;
+  }
+
+  audio::-webkit-media-controls-panel {
+    background-color: #2d2a26;
+  }
+
+  /* Touch-friendly sliders */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    background: #374151;
+    border-radius: 4px;
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #a8b5a0;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #2d2a26;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #a8b5a0;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #2d2a26;
+  }
+
+  /* Safe area handling for notched devices */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Animated background elements */
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  .float-animation {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  /* Enhanced glow effects for the homepage */
+  .homepage-glow {
+    filter: drop-shadow(0 0 10px rgba(168, 181, 160, 0.3));
+  }
+}
+
+@layer utilities {
+  .font-pixel {
+    font-family: var(--font-pixel);
+  }
+
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  /* Utility for preventing zoom on double tap */
+  .no-zoom {
+    touch-action: pan-x pan-y;
+  }
+
+  /* Background pattern utilities */
+  .bg-map-pattern {
+    background-image: radial-gradient(circle at 25% 25%, rgba(168, 181, 160, 0.1) 2px, transparent 2px),
+      radial-gradient(circle at 75% 75%, rgba(212, 164, 116, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+}
+
+/* PWA specific styles */
+@media (display-mode: standalone) {
+  body {
+    /* Hide browser UI when installed as PWA */
+    -webkit-app-region: no-drag;
+  }
+}
+
+/* Dark mode media query support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .animate-pulse,
+  .animate-ping {
+    animation: none !important;
+  }
+}
