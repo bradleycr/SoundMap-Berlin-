@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "./providers"
 import { Button } from "@/components/ui/button"
+import { Mic, Map, Headphones, PartyPopper, Navigation, Download } from "lucide-react"
+import { useAuth } from "@/app/providers"
 
-// Disable static prerendering – always render on demand
 export const dynamic = 'force-dynamic'
 
 export default function HomePage() {

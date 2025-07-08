@@ -1,20 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase"
 
 export const dynamic = 'force-dynamic'
 
-/**
- * Enhanced Auth Callback Handler
- * Handles redirects from:
- * 1. OAuth providers (Google, etc.) 
- * 2. Email verification links
- * 3. Password reset flows
- * 4. Magic link sign-ins
- */
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
@@ -226,5 +218,28 @@ export default function AuthCallbackPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * Enhanced Auth Callback Handler
+ * Handles redirects from:
+ * 1. OAuth providers (Google, etc.) 
+ * 2. Email verification links
+ * 3. Password reset flows
+ * 4. Magic link sign-ins
+ */
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-b from-stone-900 to-stone-800 flex items-center justify-center p-4">
+        <div className="text-center space-y-4">
+          <div className="text-2xl font-pixel text-sage-400 animate-pulse">LOADING...</div>
+          <div className="text-sm font-pixel text-stone-400">Initializing authentication...</div>
+        </div>
+      </div>
+    }>
+      <AuthCallbackContent />
+    </Suspense>
   )
 }
