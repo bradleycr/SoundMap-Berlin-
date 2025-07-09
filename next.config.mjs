@@ -49,6 +49,20 @@ const config = withPWA({
         },
       },
     },
+    {
+      // Crucial rule for application code:
+      // Always try the network first to get the latest app version.
+      // Fallback to cache for offline support.
+      urlPattern: ({ request }) => request.destination === 'script',
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'scripts',
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 2 * 24 * 60 * 60, // 2 days
+        },
+      },
+    },
   ],
 })(nextConfig)
 
