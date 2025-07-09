@@ -117,3 +117,5 @@ MIT License - feel free to use this for your own audio mapping projects!
 
 **SoundMap v1.0.0 - Retro Edition**
 *Headphones on, walk, discover.*
+
+<!-- Triggering Vercel redeploy: $(date) -->
