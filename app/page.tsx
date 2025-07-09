@@ -128,7 +128,13 @@ export default function HomePage() {
         <div className="text-center max-w-md mx-auto space-y-8">
           {/* Logo with branding */}
           <div className="space-y-4">
-            <h1 className="text-4xl md:text-6xl font-pixel text-sage-400 neon-glow animate-logo-pulse">SOUNDMAP</h1>
+            <h1
+              className="text-4xl md:text-6xl font-pixel flex items-center justify-center gap-3 text-sage-400 neon-glow animate-logo-pulse tracking-tight"
+              style={{ letterSpacing: '-0.04em', fontWeight: 700 }}
+            >
+              <span className="drop-shadow-lg">SoundMap</span>
+              <span className="text-coral-400 drop-shadow-lg" style={{ fontWeight: 900, letterSpacing: '0.01em' }}>Berlin</span>
+            </h1>
             <div className="text-sm text-coral-400 font-pixel tracking-wider">BY DAS Y RADIO</div>
             <div className="text-xs text-mint-400 font-pixel">BERLIN AUDIO JOURNEY</div>
           </div>

@@ -46,6 +46,21 @@ $$ LANGUAGE SQL STABLE;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.clips ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view all profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Anyone can view clips" ON public.clips;
+DROP POLICY IF EXISTS "Allow clip inserts for anonymous and authenticated users" ON public.clips;
+DROP POLICY IF EXISTS "Allow clip inserts for authenticated users" ON public.clips;
+DROP POLICY IF EXISTS "Users can update their own clips" ON public.clips;
+DROP POLICY IF EXISTS "Users can delete their own clips" ON public.clips;
+DROP POLICY IF EXISTS "Anyone can view files in the clips bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Allow storage uploads for anonymous and authenticated users" ON storage.objects;
+DROP POLICY IF EXISTS "Allow storage uploads for authenticated users" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own clips" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own clips" ON storage.objects;
+
 -- POLICIES FOR PROFILES TABLE
 CREATE POLICY "Users can view all profiles" ON public.profiles FOR SELECT USING (true);
 CREATE POLICY "Users can insert their own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
@@ -53,13 +68,13 @@ CREATE POLICY "Users can update their own profile" ON public.profiles FOR UPDATE
 
 -- POLICIES FOR CLIPS TABLE
 CREATE POLICY "Anyone can view clips" ON public.clips FOR SELECT USING (true);
-CREATE POLICY "Allow clip inserts for anonymous and authenticated users" ON public.clips FOR INSERT WITH CHECK ( (auth.role() = 'authenticated' AND auth.uid() = owner) OR (auth.role() = 'anon' AND owner IS NULL) );
+CREATE POLICY "Allow clip inserts for authenticated users" ON public.clips FOR INSERT WITH CHECK (auth.uid() = owner);
 CREATE POLICY "Users can update their own clips" ON public.clips FOR UPDATE USING (auth.uid() = owner);
 CREATE POLICY "Users can delete their own clips" ON public.clips FOR DELETE USING (auth.uid() = owner);
 
 -- POLICIES FOR STORAGE (for the 'clips' bucket)
 CREATE POLICY "Anyone can view files in the clips bucket" ON storage.objects FOR SELECT USING (bucket_id = 'clips');
-CREATE POLICY "Allow storage uploads for anonymous and authenticated users" ON storage.objects FOR INSERT WITH CHECK ( bucket_id = 'clips' AND (auth.role() = 'authenticated' OR auth.role() = 'anon') );
+CREATE POLICY "Allow storage uploads for authenticated users" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'clips' AND auth.role() = 'authenticated');
 CREATE POLICY "Users can update their own clips" ON storage.objects FOR UPDATE USING (bucket_id = 'clips' AND auth.uid() = owner);
 CREATE POLICY "Users can delete their own clips" ON storage.objects FOR DELETE USING (bucket_id = 'clips' AND auth.uid() = owner);
 

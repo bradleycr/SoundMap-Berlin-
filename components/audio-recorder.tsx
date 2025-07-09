@@ -101,14 +101,8 @@ export function AudioRecorder() {
 
     // Ensure we have a user before uploading
     if (!user) {
-      console.log("🔐 No user found, attempting anonymous sign-in...")
-      try {
-        await signInAnonymously()
-      } catch (error) {
-        console.error("❌ Anonymous sign-in failed:", error)
-        setShowAuthPrompt(true)
-        return
-      }
+      setShowAuthPrompt(true)
+      return
     }
 
     // Validate title is provided
@@ -119,127 +113,75 @@ export function AudioRecorder() {
 
     setIsUploading(true)
 
-    // Add timeout wrapper to prevent infinite hanging
-    const uploadWithTimeout = async () => {
-      try {
-        console.log("🎵 Starting upload process...")
-        
-        // Validate
-        const validation = await validateAudioFile(recordedBlob, { maxDurationSeconds: MAX_RECORDING_SECONDS })
-        if (!validation.isValid) {
-          toast.error(validation.error || "Invalid audio file")
-          setIsUploading(false)
-          return
-        }
-        console.log("✅ Audio validation passed")
-
-        // Compress if necessary
-        // Temporarily skip compression to debug upload hanging
-        const processedBlob = recordedBlob
-        console.log("✅ Audio compression complete, size:", processedBlob.size)
-
-        // Get location (fallback to Berlin if unavailable)
-        const location = await getCurrentLocation().catch(() => ({
-          latitude: 52.52,
-          longitude: 13.405,
-        }))
-        console.log("📍 Location obtained:", location)
-
-        // Generate filename
-        const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
-        const filename = `clip-${timestamp}.webm`
-        console.log("📁 Filename:", filename)
-
-        // Upload to Supabase Storage
-        console.log("☁️ Starting Supabase upload...")
-        console.log("🔍 Supabase client config check...")
-        console.log("- URL:", process.env.NEXT_PUBLIC_SUPABASE_URL)
-        console.log("- Key exists:", !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-        console.log("- Blob size:", processedBlob.size, "bytes")
-        console.log("- Blob type:", processedBlob.type)
-        
-        // Test connection first
-        console.log("🧪 Testing Supabase connection...")
-        try {
-          const { data: buckets, error: bucketError } = await supabase.storage.listBuckets()
-          console.log("✅ Bucket list:", buckets?.map(b => b.name) || "none")
-          if (bucketError) console.warn("⚠️ Bucket list warning:", bucketError)
-        } catch (connError) {
-          console.error("❌ Connection test failed:", connError)
-        }
-        
-        const { data, error } = await supabase.storage.from("clips").upload(filename, processedBlob)
-
-        if (error) {
-          console.error("❌ Upload error:", error)
-          throw error
-        }
-
-        console.log("✅ Upload successful:", data)
-
-        // Generate the public URL for the uploaded file
-        const { data: { publicUrl } } = supabase.storage.from("clips").getPublicUrl(data.path)
-
-        // Save metadata to database with correct table name and fields
-        const clipData = {
-          title: title.trim(),
-          lat: location.latitude,
-          lng: location.longitude,
-          radius: radius,
-          url: publicUrl,
-          owner: user?.user_metadata?.anonymous ? null : user?.id, // Set owner to null for anonymous users
-          created_at: new Date().toISOString(),
-        }
-
-        console.log("💾 Saving clip metadata:", clipData)
-
-        const { error: dbError } = await supabase.from("clips").insert(clipData)
-
-        if (dbError) {
-          console.error("❌ Database error:", dbError)
-          // If it's an authentication error, show auth prompt
-          if (dbError.message.includes('authentication') || dbError.message.includes('permission')) {
-            setShowAuthPrompt(true)
-            setIsUploading(false)
-            return
-          }
-          throw dbError
-        }
-
-        console.log("✅ Database entry created")
-        toast.success("Recording uploaded successfully!")
-        setTitle("")
-        setRecordedBlob(null)
-        setUploadSuccess(true)
-        setIsUploading(false)
-      } catch (error) {
-        console.error("❌ Upload failed:", error)
-        
-        // Handle specific error types
-        if (error instanceof Error) {
-          if (error.message.includes('authentication') || error.message.includes('permission')) {
-            setShowAuthPrompt(true)
-            toast.error("Authentication required. Please sign in to upload clips.")
-          } else {
-            toast.error(`Upload failed: ${error.message}`)
-          }
-        } else {
-          toast.error("Upload failed. Please try again.")
-        }
-        setIsUploading(false)
-      }
-    }
-
-    // Race the upload against a timeout
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("Upload timed out after 60 seconds")), 60000)
-    })
-
     try {
-      await Promise.race([uploadWithTimeout(), timeoutPromise])
+      console.log("🎵 Starting upload process...")
+      
+      // Validate audio file
+      const validation = await validateAudioFile(recordedBlob, { maxDurationSeconds: MAX_RECORDING_SECONDS })
+      if (!validation.isValid) {
+        toast.error(validation.error || "Invalid audio file")
+        setIsUploading(false)
+        return
+      }
+
+      // Get location (fallback to Berlin if unavailable)
+      const location = await getCurrentLocation().catch(() => ({
+        latitude: 52.52,
+        longitude: 13.405,
+      }))
+
+      // Generate filename
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
+      const filename = `clip-${timestamp}.webm`
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage.from("clips").upload(filename, recordedBlob)
+
+      if (error) {
+        console.error("❌ Upload error:", error)
+        throw error
+      }
+
+      // Generate the public URL for the uploaded file
+      const { data: { publicUrl } } = supabase.storage.from("clips").getPublicUrl(data.path)
+
+      // Save metadata to database
+      const clipData = {
+        title: title.trim(),
+        lat: location.latitude,
+        lng: location.longitude,
+        radius: radius,
+        url: publicUrl,
+        owner: user.id, // Always use user.id since we have a valid session
+        created_at: new Date().toISOString(),
+      }
+
+      const { error: dbError } = await supabase.from("clips").insert(clipData)
+
+      if (dbError) {
+        console.error("❌ Database error:", dbError)
+        throw dbError
+      }
+
+      console.log("✅ Upload successful!")
+      toast.success("Recording uploaded successfully!")
+      setTitle("")
+      setRecordedBlob(null)
+      setUploadSuccess(true)
     } catch (error) {
-      console.error("❌ Upload process failed or timed out:", error)
-      toast.error(error instanceof Error ? error.message : "Upload failed")
+      console.error("❌ Upload failed:", error)
+      
+      if (error instanceof Error) {
+        if (error.message.includes('authentication') || error.message.includes('permission')) {
+          setShowAuthPrompt(true)
+          toast.error("Authentication required. Please sign in to upload clips.")
+        } else {
+          toast.error(`Upload failed: ${error.message}`)
+        }
+      } else {
+        toast.error("Upload failed. Please try again.")
+      }
+    } finally {
       setIsUploading(false)
     }
   }

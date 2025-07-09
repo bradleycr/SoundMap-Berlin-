@@ -39,96 +39,26 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
-  // Generate a unique device ID for anonymous users
-  const getDeviceId = () => {
-    let deviceId = localStorage.getItem("soundmap_device_id")
-    if (!deviceId) {
-      deviceId = `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      localStorage.setItem("soundmap_device_id", deviceId)
-    }
-    return deviceId
-  }
-
-  // Commented out Google OAuth for now - requires complex setup
-  /*
-  const signInWithGoogle = async () => {
-    try {
-      console.log("🔗 Initiating Google OAuth flow...")
-
-      // Get the current URL for redirect
-      const redirectUrl = `${window.location.origin}/auth/callback`
-
-      console.log("🔗 Redirect URL:", redirectUrl)
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: redirectUrl,
-          queryParams: {
-            access_type: "offline",
-            prompt: "select_account", // Allow user to choose account
-          },
-          // Use PKCE for security
-          flowType: "pkce",
-        },
-      })
-
-      if (error) {
-        console.error("❌ Google OAuth initiation failed:", error)
-        throw new Error(`Google sign-in failed: ${error.message}`)
-      }
-
-      console.log("✅ Google OAuth flow initiated successfully")
-      // The redirect will happen automatically
-    } catch (error: any) {
-      console.error("❌ Google sign-in error:", error)
-      throw error
-    }
-  }
-  */
-
   /**
-   * Anonymous sign-in for quick start
-   * Falls back to device-based auth if Supabase anonymous auth fails
+   * Anonymous sign-in using Supabase's built-in anonymous auth
+   * This creates a real Supabase session that works with RLS
    */
   const signInAnonymously = async () => {
     try {
       console.log("🔐 Attempting anonymous sign in...")
 
-      // Try Supabase anonymous auth first
-      const { data, error } = await supabase.auth.signInAnonymously({
-        options: {
-          data: {
-            anonymous: true,
-            device_id: getDeviceId(),
-          },
-        },
-      })
+      const { data, error } = await supabase.auth.signInAnonymously()
 
       if (error) {
-        console.warn("⚠️ Supabase anonymous auth failed:", error.message)
-        console.log("🔄 Falling back to device-based auth...")
-
-        // Fallback to device-based anonymous user
-        const deviceId = getDeviceId()
-        const anonymousUser = {
-          id: deviceId,
-          email: `${deviceId}@anonymous.local`,
-          user_metadata: { anonymous: true, device_id: deviceId },
-          app_metadata: {},
-          aud: "authenticated",
-          created_at: new Date().toISOString(),
-        } as User
-
-        setUser(anonymousUser)
-        await createProfile({ id: deviceId, name: "Anonymous User", anonymous: true })
-        console.log("✅ Device-based anonymous user created")
-        return
+        console.error("❌ Anonymous sign in failed:", error.message)
+        throw error
       }
 
       if (data.user) {
-        console.log("✅ Supabase anonymous user created:", data.user.id)
+        console.log("✅ Anonymous user created:", data.user.id)
         setUser(data.user)
+        
+        // Create profile for anonymous user
         await createProfile({
           id: data.user.id,
           name: "Anonymous User",
@@ -137,21 +67,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error("❌ Anonymous sign in error:", error)
-
-      // Always fallback to device-based auth for MVP
-      const deviceId = getDeviceId()
-      const anonymousUser = {
-        id: deviceId,
-        email: `${deviceId}@anonymous.local`,
-        user_metadata: { anonymous: true, device_id: deviceId },
-        app_metadata: {},
-        aud: "authenticated",
-        created_at: new Date().toISOString(),
-      } as User
-
-      setUser(anonymousUser)
-      await createProfile({ id: deviceId, name: "Anonymous User", anonymous: true })
-      console.log("✅ Fallback device-based user created")
+      throw error
     }
   }
 
@@ -162,63 +78,55 @@ export function Providers({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signOut()
       if (error) {
-        console.warn("⚠️ Supabase sign out error:", error)
+        console.error("❌ Sign out error:", error)
+        throw error
       }
 
       setUser(null)
       setProfile(null)
-
-      // Clear local storage
-      localStorage.removeItem("soundmap_device_id")
-      localStorage.removeItem("soundmap_profile")
-      localStorage.removeItem("soundmap_preferences")
-
       console.log("✅ Signed out successfully")
     } catch (error) {
       console.error("❌ Sign out error:", error)
+      throw error
     }
   }
 
   /**
    * Create or update user profile
-   * Handles both anonymous and authenticated users
+   * Works with both anonymous and authenticated users
    */
   const createProfile = async (userData?: any) => {
-    if (!user && !userData) return
+    const currentUser = userData || user
+    if (!currentUser) return
 
     const profileData = {
-      id: userData?.id || user?.id,
-      name: userData?.name || user?.user_metadata?.full_name || user?.user_metadata?.name || "Anonymous User",
-      email: userData?.email || user?.email || null,
-      avatar_url: userData?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null,
-      anonymous: userData?.anonymous || user?.user_metadata?.anonymous || false,
-      likes: userData?.likes || [],
-      dislikes: userData?.dislikes || [],
+      id: currentUser.id,
+      name: currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || userData?.name || "Anonymous User",
+      email: currentUser.email || null,
+      avatar_url: currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || null,
+      anonymous: userData?.anonymous || false,
+      likes: [],
+      dislikes: [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
 
     try {
-      // Try to create in Supabase
       const { data, error } = await supabase
         .from("profiles")
         .upsert(profileData, { onConflict: "id" })
         .select()
         .single()
 
-      if (data && !error) {
-        setProfile(data)
-        console.log("✅ Profile created/updated in database")
-      } else {
-        // Fallback to localStorage for offline/demo mode
-        console.warn("⚠️ Profile creation failed, using localStorage:", error?.message)
-        localStorage.setItem("soundmap_profile", JSON.stringify(profileData))
-        setProfile(profileData)
+      if (error) {
+        console.error("❌ Profile creation failed:", error.message)
+        return
       }
+
+      setProfile(data)
+      console.log("✅ Profile created/updated in database")
     } catch (error) {
-      console.warn("⚠️ Profile creation error, using localStorage:", error)
-      localStorage.setItem("soundmap_profile", JSON.stringify(profileData))
-      setProfile(profileData)
+      console.error("❌ Profile creation error:", error)
     }
   }
 
@@ -226,21 +134,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
 
-      if (data && !error) {
-        setProfile(data)
-      } else {
-        // Fallback to localStorage
-        const localProfile = localStorage.getItem("soundmap_profile")
-        if (localProfile) {
-          setProfile(JSON.parse(localProfile))
-        }
+      if (error) {
+        console.error("❌ Profile fetch error:", error.message)
+        return
       }
+
+      setProfile(data)
+      console.log("✅ Profile loaded")
     } catch (error) {
-      console.warn("Profile fetch error:", error)
-      const localProfile = localStorage.getItem("soundmap_profile")
-      if (localProfile) {
-        setProfile(JSON.parse(localProfile))
-      }
+      console.error("❌ Profile fetch error:", error)
     }
   }
 
