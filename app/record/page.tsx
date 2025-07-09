@@ -1,34 +1,32 @@
 "use client"
 
-import { useRouter } from "next/navigation"
-import { ArrowLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { AudioRecorder } from "@/components/audio-recorder"
-
-export const dynamic = 'force-dynamic'
+import { useAuth } from "@/app/providers"
+import AudioRecorder from "@/components/audio-recorder"
+import { LoginPrompt } from "@/components/auth/login-prompt"
+import { Loader2 } from "lucide-react"
 
 export default function RecordPage() {
-  const router = useRouter()
+  const { user, loading } = useAuth()
 
-  return (
-    <div className="flex h-screen flex-col bg-gradient-to-b from-stone-900 to-stone-800 p-4 sm:p-6">
-      {/* Header */}
-      <header className="w-full max-w-md mx-auto flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <Button onClick={() => router.back()} className="pixel-button-sand text-sm">
-            <ArrowLeft className="w-5 h-5 mr-1 sm:mr-2" />
-            BACK
-          </Button>
-          <h1 className="text-lg sm:text-xl font-pixel text-sage-400">RECORD SOUND</h1>
-          {/* Spacer to keep title centered */}
-          <div className="w-20 sm:w-24" /> 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-stone-900 to-stone-800 p-4 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-sage-400 mb-4" />
+          <div className="text-xl font-pixel text-sage-400">LOADING...</div>
         </div>
-      </header>
+      </div>
+    )
+  }
 
-      {/* Recorder */}
-      <main className="flex-grow flex items-center justify-center">
-        <AudioRecorder />
-      </main>
-    </div>
-  )
+  if (!user) {
+    return (
+      <LoginPrompt 
+        title="JOIN THE SOUNDMAP"
+        message="Sign in to record your own audio clips and add them to the collective map of Berlin."
+      />
+    )
+  }
+
+  return <AudioRecorder />
 }

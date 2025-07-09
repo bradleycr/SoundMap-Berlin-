@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoundMap Berlin - Magic Link</title>
+    <style>
+        /* Basic Reset */
+        body, h1, p { margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #1c1c1c; color: #e5e5e5; }
+        .container { max-width: 600px; margin: 40px auto; padding: 20px; background-color: #2a2a2a; border-radius: 8px; border: 1px solid #444; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-family: 'Courier New', Courier, monospace; font-size: 32px; color: #a3e635; /* a lime-like green */ letter-spacing: 2px; text-shadow: 0 0 5px rgba(163, 230, 53, 0.5); }
+        .content { text-align: center; }
+        .content p { font-size: 16px; line-height: 1.6; color: #cccccc; margin-bottom: 30px; }
+        .button-container { text-align: center; }
+        .button { display: inline-block; padding: 14px 28px; font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: bold; color: #1c1c1c; background-color: #a3e635; text-decoration: none; border-radius: 5px; border: 1px solid #a3e635; text-transform: uppercase; letter-spacing: 1px; }
+        .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #888; }
+        .footer p { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SoundMap Berlin</h1>
+        </div>
+        <div class="content">
+            <p>Welcome! Click the button below to securely sign in to your account and continue your audio journey.</p>
+            <div class="button-container">
+                <!-- Supabase will automatically replace this link -->
+                <a href="{{ .ConfirmationURL }}" class="button">Sign In</a>
+            </div>
+        </div>
+        <div class="footer">
+            <p>If you did not request this email, you can safely ignore it.</p>
+            <p>&copy; 2024 Das Y Radio. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html> 

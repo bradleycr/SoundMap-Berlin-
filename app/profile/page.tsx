@@ -53,16 +53,14 @@ export default function ProfilePage() {
   const [archivedClips, setArchivedClips] = useState<Clip[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isOnline, setIsOnline] = useState(true)
-  const [showAuthForm, setShowAuthForm] = useState(false)
-  const [email, setEmail] = useState("")
   const [displayName, setDisplayName] = useState("")
   const [isEditing, setIsEditing] = useState(false)
 
-  // Check for password reset flow
+  // Check for password reset flow from URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     if (urlParams.get("update-password") === "true") {
-      setShowAuthForm(true)
+      // This part can be enhanced or integrated with a modal
     }
   }, [])
 
@@ -89,10 +87,15 @@ export default function ProfilePage() {
     }
   }, [])
 
-  // Load profile data - separate effects to prevent loops
+  // Load profile data and prompt for username if new
   useEffect(() => {
     if (user && profile) {
-      setDisplayName(profile.name || "Anonymous User")
+      const currentName = profile.name || ""
+      setDisplayName(currentName)
+      // If the user is not anonymous and has no name, prompt them to set one.
+      if (!profile.anonymous && !currentName) {
+        setIsEditing(true)
+      }
     }
   }, [user, profile])
 
@@ -393,9 +396,9 @@ export default function ProfilePage() {
         </div>
 
         <button
-          onClick={() => setShowAuthForm(!showAuthForm)}
+          onClick={isAnonymous ? () => router.push('/login') : handleSignOut}
           className={`pixel-button-compact ${isAnonymous ? "pixel-button-coral" : "pixel-button-mint"} flex items-center gap-1`}
-          title={isAnonymous ? "Sign in or upgrade with email" : "Sign out"}
+          title={isAnonymous ? "Sign in or Sign up" : "Sign out"}
         >
           {isAnonymous ? (
             <>
@@ -472,52 +475,6 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
-
-        {/* Magic Link Auth Form */}
-        {showAuthForm && isAnonymous && (
-          <div className="retro-border p-4 space-y-4">
-            <div className="text-center">
-              <div className="text-sm font-pixel text-sage-400 mb-2">SAVE YOUR ACCOUNT</div>
-              <div className="text-xs font-pixel text-stone-400">NEVER LOSE YOUR CLIPS AND LIKES</div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <label className="text-xs font-pixel text-sand-400">EMAIL</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-stone-400" />
-                  <Input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="bg-stone-800 border-sage-400 text-sage-400 font-pixel text-sm pl-10"
-                    placeholder="your@email.com"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <button
-                onClick={handleAuth}
-                disabled={authLoading || !email}
-                className="pixel-button-coral w-full flex items-center justify-center gap-2"
-              >
-                {authLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-mobile-xs">SENDING...</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4" />
-                    <span className="text-mobile-xs">SEND MAGIC LINK</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Tabs - Mobile optimized */}
         <div className="flex gap-1 retro-border p-1">

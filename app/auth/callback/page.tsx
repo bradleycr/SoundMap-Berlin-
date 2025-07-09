@@ -107,7 +107,7 @@ function AuthCallbackContent() {
           }
 
           setStatus("success")
-          setTimeout(() => router.push("/"), 2000)
+          setTimeout(() => router.push("/profile"), 2000)
         } else {
           throw new Error("Failed to create session from verification link")
         }
@@ -132,7 +132,7 @@ function AuthCallbackContent() {
         if (data.session) {
           console.log("✅ OAuth callback successful")
           setStatus("success")
-          setTimeout(() => router.push("/"), 2000)
+          setTimeout(() => router.push("/profile"), 2000)
         } else {
           throw new Error("No session found after OAuth callback")
         }
@@ -155,7 +155,7 @@ function AuthCallbackContent() {
         if (data.session) {
           console.log("✅ Found existing session")
           setStatus("success")
-          setTimeout(() => router.push("/"), 2000)
+          setTimeout(() => router.push("/profile"), 2000)
         } else {
           console.warn("⚠️ No session found")
           setError("No authentication session found")
