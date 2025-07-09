@@ -400,12 +400,12 @@ export default function ProfilePage() {
           {isAnonymous ? (
             <>
               <LogIn className="w-3 h-3" />
-              <span className="hidden sm:inline text-mobile-xs">SIGN IN</span>
+              <span className="text-mobile-xs font-pixel">SIGN IN</span>
             </>
           ) : (
             <>
               <LogOut className="w-3 h-3" />
-              <span className="hidden sm:inline text-mobile-xs">SIGN OUT</span>
+              <span className="text-mobile-xs font-pixel">SIGN OUT</span>
             </>
           )}
         </button>

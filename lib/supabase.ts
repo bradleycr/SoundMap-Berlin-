@@ -14,25 +14,27 @@ function debugSupabaseConfig() {
  * Development: Uses localhost:3000
  */
 export function getSiteUrl(): string {
-  // For client-side, use window.location.origin if available
-  if (typeof window !== 'undefined') {
+  // For server-side, check environment variables first
+  // This is especially important for Vercel deployments
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+  if (siteUrl) {
+    // Ensure it's a valid URL format
+    return siteUrl.startsWith("http") ? siteUrl : `https://${siteUrl}`
+  }
+
+  // For client-side, fallback to window.location.origin if available
+  if (typeof window !== "undefined") {
     return window.location.origin
   }
 
-  // For server-side, check environment variables
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+  // Vercel-specific environment variable
   const vercelUrl = process.env.NEXT_PUBLIC_VERCEL_URL
-  
-  if (siteUrl) {
-    return siteUrl
-  }
-  
   if (vercelUrl) {
     return `https://${vercelUrl}`
   }
-  
-  // Fallback to localhost for development
-  return 'http://localhost:3000'
+
+  // Fallback to localhost for local development
+  return "http://localhost:3000"
 }
 
 /**
@@ -51,15 +53,13 @@ export function getPasswordResetUrl(): string {
 
 export function createClient() {
   // Use the new Supabase configuration
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://rwtvjimthxlnufmnyzbf.supabase.co"
-  const supabaseAnonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ3dHZqaW10aHhsbnVmbW55emJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5Njk5NTMsImV4cCI6MjA2NzU0NTk1M30.ZynRZDO8rTlLxgqERh3Wx-VID2wDbbHkbpgneN-WRYE"
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   // Validate configuration
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.error("❌ Supabase configuration missing!")
-    throw new Error("Supabase configuration is incomplete")
+    console.error("❌ Supabase configuration missing! Check your .env.local file or Vercel environment variables.")
+    throw new Error("Supabase URL or Anon Key is missing.")
   }
 
   try {
