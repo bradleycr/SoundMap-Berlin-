@@ -56,10 +56,7 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isOnline, setIsOnline] = useState(true) // Default to true, will be updated in useEffect
   const [showAuthForm, setShowAuthForm] = useState(false)
-  const [authMode, setAuthMode] = useState<"login" | "signup" | "reset" | "forgot">("login")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
+  // Remove password state for magic link only
   const [displayName, setDisplayName] = useState("")
   const [isEditing, setIsEditing] = useState(false)
   const [authLoading, setAuthLoading] = useState(false)
@@ -216,135 +213,27 @@ export default function ProfilePage() {
   }
   */
 
+  // Magic link only auth
   const handleAuth = async () => {
-    if (authMode === "reset") {
-      // Handle password reset or update
-      if (!password) {
-        showError("Missing Information", "Please enter your new password")
-        return
-      }
-      
-      setAuthLoading(true)
-      
-      try {
-        const { error } = await supabase.auth.updateUser({
-          password: password
-        })
-        
-        if (error) throw error
-        
-        success("Password updated successfully!")
-        setAuthMode("login")
-        setPassword("")
-        setShowAuthForm(false)
-        
-        // Remove password reset flag from URL
-        const url = new URL(window.location.href)
-        url.searchParams.delete('update-password')
-        window.history.replaceState({}, '', url.toString())
-        
-      } catch (error: any) {
-        console.error("Password update error:", error)
-        showError("Password Update Failed", error.message || "Please try again")
-      } finally {
-        setAuthLoading(false)
-      }
+    if (!email) {
+      showError("Missing Information", "Please enter your email")
       return
     }
-
-    if (!email || (!password && authMode !== "forgot")) {
-      showError("Missing Information", "Please enter both email and password")
-      return
-    }
-
     setAuthLoading(true)
-
     try {
-      if (authMode === "login") {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-
-        if (error) throw error
-
-        if (data.user) {
-          await createProfile({
-            id: data.user.id,
-            name: displayName || data.user.email?.split("@")[0] || "User",
-            email: data.user.email,
-            anonymous: false,
-          })
-          success("Signed in successfully!")
-        }
-      } else if (authMode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              display_name: displayName || email.split("@")[0],
-            },
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
-        })
-
-        if (error) throw error
-
-        if (data.user) {
-          // Don't create profile yet - wait for email verification
-          if (data.user.email_confirmed_at) {
-            // User is already confirmed (shouldn't happen on signup, but just in case)
-            await createProfile({
-              id: data.user.id,
-              name: displayName || email.split("@")[0] || "User",
-              email: email,
-              anonymous: false,
-            })
-            success("Account created and verified! Welcome to SoundMap!")
-          } else {
-            // Email confirmation required
-            success("Account created! Please check your email to verify your account before signing in.")
-          }
-        }
-      } else if (authMode === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        })
-
-        if (error) throw error
-
-        success("Password reset email sent! Check your inbox.")
-        setAuthMode("login")
-      }
-
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+      if (error) throw error
+      success("Check your email for a magic link to sign in!")
       setShowAuthForm(false)
       setEmail("")
-      setPassword("")
-      setDisplayName("")
     } catch (error: any) {
-      console.error("Auth error:", error)
-      
-      // Provide more specific error messages
-      let errorMessage = "Please try again"
-      
-      if (error.message.includes("Invalid login credentials")) {
-        errorMessage = "Invalid email or password. Please check your credentials."
-      } else if (error.message.includes("Email not confirmed")) {
-        errorMessage = "Please check your email and click the verification link before signing in."
-      } else if (error.message.includes("User already registered")) {
-        errorMessage = "An account with this email already exists. Try signing in instead."
-      } else if (error.message.includes("Password")) {
-        errorMessage = "Password must be at least 6 characters long."
-      } else if (error.message.includes("email")) {
-        errorMessage = "Please enter a valid email address."
-      } else if (error.message.includes("User not found")) {
-        errorMessage = "No account found with this email address."
-      } else if (error.message) {
-        errorMessage = error.message
-      }
-      
-      showError("Authentication Failed", errorMessage)
+      console.error("Magic link error:", error)
+      showError("Authentication Failed", error.message || "Please try again")
     } finally {
       setAuthLoading(false)
     }
@@ -477,7 +366,8 @@ export default function ProfilePage() {
     )
   }
 
-  const isAnonymous = user?.user_metadata?.anonymous !== false
+  // Consider user anonymous if no email
+  const isAnonymous = !user?.email
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-stone-900 to-stone-800 p-4 safe-area-top safe-area-bottom">
@@ -491,8 +381,19 @@ export default function ProfilePage() {
           <div className="text-lg font-pixel text-sage-400">PROFILE</div>
           <div className="text-xs text-mint-400 font-pixel">{isOnline ? "ONLINE" : "OFFLINE"}</div>
         </div>
-        <Button onClick={() => setShowAuthForm(!showAuthForm)} className="pixel-button-mint">
-          {isAnonymous ? <LogIn className="w-4 h-4" /> : <LogOut className="w-4 h-4" />}
+        <Button onClick={() => setShowAuthForm(!showAuthForm)} className={`pixel-button-mint ${isAnonymous ? 'bg-coral-400' : 'bg-mint-400'}`}
+          title={isAnonymous ? 'Sign in or upgrade with email' : 'Sign out'}>
+          {isAnonymous ? (
+            <>
+              <LogIn className="w-4 h-4 mr-2" />
+              <span className="font-pixel">SIGN IN / UPGRADE</span>
+            </>
+          ) : (
+            <>
+              <LogOut className="w-4 h-4 mr-2" />
+              <span className="font-pixel">SIGN OUT</span>
+            </>
+          )}
         </Button>
       </div>
 
@@ -574,45 +475,20 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-3">
-              {authMode !== "reset" && (
-                <div className="space-y-2">
-                  <label className="text-sm font-pixel text-sand-400">EMAIL</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-stone-400" />
-                    <Input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="bg-stone-800 border-sage-400 text-sage-400 font-pixel text-sm pl-10"
-                      placeholder="your@email.com"
-                    />
-                  </div>
+              {/* Only email field for magic link */}
+              <div className="space-y-2">
+                <label className="text-sm font-pixel text-sand-400">EMAIL</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-stone-400" />
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="bg-stone-800 border-sage-400 text-sage-400 font-pixel text-sm pl-10"
+                    placeholder="your@email.com"
+                  />
                 </div>
-              )}
-
-              {authMode !== "forgot" && (
-                <div className="space-y-2">
-                  <label className="text-sm font-pixel text-sand-400">
-                    {authMode === "reset" ? "NEW PASSWORD" : "PASSWORD"}
-                  </label>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="bg-stone-800 border-sage-400 text-sage-400 font-pixel text-sm pr-10"
-                      placeholder={authMode === "reset" ? "Enter new password" : "••••••••"}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-400"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-              )}
+              </div>
 
               {authMode === "signup" && (
                 <div className="space-y-2">
@@ -630,77 +506,20 @@ export default function ProfilePage() {
             <div className="space-y-3">
               <Button
                 onClick={handleAuth}
-                disabled={authLoading || 
-                  (authMode === "reset" && !password) ||
-                  (authMode !== "reset" && !email) ||
-                  (authMode === "login" && !password) ||
-                  (authMode === "signup" && !password)
-                }
+                disabled={authLoading || !email}
                 className="pixel-button-coral w-full flex items-center justify-center gap-2"
               >
                 {authLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    PROCESSING...
+                    SENDING MAGIC LINK...
                   </>
-                ) : authMode === "login" ? (
-                  "SIGN IN"
-                ) : authMode === "signup" ? (
-                  "SIGN UP"
-                ) : authMode === "forgot" ? (
-                  "SEND RESET EMAIL"
-                ) : authMode === "reset" ? (
-                  "UPDATE PASSWORD"
                 ) : (
-                  "CONTINUE"
+                  "SEND MAGIC LINK"
                 )}
               </Button>
 
-              {authMode === "reset" ? (
-                <button
-                  onClick={() => {
-                    setAuthMode("login")
-                    setPassword("")
-                    setShowAuthForm(false)
-                    // Remove password reset flag from URL
-                    const url = new URL(window.location.href)
-                    url.searchParams.delete('update-password')
-                    window.history.replaceState({}, '', url.toString())
-                  }}
-                  className="w-full text-xs font-pixel text-stone-400 hover:text-sage-400"
-                >
-                  CANCEL
-                </button>
-              ) : authMode === "login" ? (
-                <div className="space-y-2">
-                  <button
-                    onClick={() => setAuthMode("signup")}
-                    className="w-full text-xs font-pixel text-stone-400 hover:text-sage-400"
-                  >
-                    NEED AN ACCOUNT? SIGN UP
-                  </button>
-                  <button
-                    onClick={() => setAuthMode("forgot")}
-                    className="w-full text-xs font-pixel text-stone-500 hover:text-coral-400"
-                  >
-                    FORGOT PASSWORD?
-                  </button>
-                </div>
-              ) : authMode === "signup" ? (
-                <button
-                  onClick={() => setAuthMode("login")}
-                  className="w-full text-xs font-pixel text-stone-400 hover:text-sage-400"
-                >
-                  HAVE AN ACCOUNT? SIGN IN
-                </button>
-              ) : authMode === "forgot" ? (
-                <button
-                  onClick={() => setAuthMode("login")}
-                  className="w-full text-xs font-pixel text-stone-400 hover:text-sage-400"
-                >
-                  BACK TO SIGN IN
-                </button>
-              ) : null}
+              {/* No alternate flows for magic link only */}
             </div>
           </div>
         )}

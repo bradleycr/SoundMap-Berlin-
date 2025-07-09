@@ -166,7 +166,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       const FALLBACK_TIMEOUT = 8000 // ms
-      // In case the Supabase request hangs we still want to render the UI
       const timeoutId = setTimeout(() => {
         console.warn("⚠️  Supabase session request timed-out – continuing offline");
         setLoading(false)
@@ -174,8 +173,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
       try {
         console.log("🔄 Initializing auth with new database...")
-
-        // Check for existing session with a race against our fallback timeout
         const {
           data: { session },
           error,
@@ -186,28 +183,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
         }
 
         if (session?.user) {
-          console.log("✅ Found existing session:", session.user.id)
           setUser(session.user)
           await getProfile(session.user.id)
-        } else {
-          // Check for device-based user
-          const deviceId = localStorage.getItem("soundmap_device_id")
-          const localProfile = localStorage.getItem("soundmap_profile")
-
-          if (deviceId && localProfile) {
-            const anonymousUser = {
-              id: deviceId,
-              email: `${deviceId}@anonymous.local`,
-              user_metadata: { anonymous: true, device_id: deviceId },
-              app_metadata: {},
-              aud: "authenticated",
-              created_at: new Date().toISOString(),
-            } as User
-
-            setUser(anonymousUser)
-            setProfile(JSON.parse(localProfile))
-            console.log("✅ Restored device-based user")
-          }
         }
       } catch (error) {
         console.warn("⚠️ Auth initialization error:", error)
@@ -219,55 +196,24 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
     initializeAuth()
 
-    // Listen for auth changes with better error handling
+    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("🔄 Auth state changed:", event, session?.user?.id)
-
       try {
         if (session?.user) {
           setUser(session.user)
           await getProfile(session.user.id)
-
-          // Handle successful email verification (signup)
-          if (event === "SIGNED_IN" && session.user.email_confirmed_at && !session.user.app_metadata.provider) {
-            console.log("✅ Email verification successful")
+          // On magic link sign-in, ensure profile is created and anonymous is false
+          if (event === "SIGNED_IN") {
             await createProfile({
               id: session.user.id,
-              name: session.user.user_metadata?.display_name || 
-                    session.user.email?.split("@")[0] || 
-                    "User",
+              name: session.user.user_metadata?.display_name || session.user.email?.split("@")[0] || "User",
               email: session.user.email,
               anonymous: false,
             })
           }
-
-          // Handle successful OAuth sign-in (Google, etc.)
-          if (event === "SIGNED_IN" && session.user.app_metadata.provider === "google") {
-            console.log("✅ Google sign-in successful")
-            await createProfile({
-              id: session.user.id,
-              name:
-                session.user.user_metadata.full_name ||
-                session.user.user_metadata.name ||
-                session.user.email?.split("@")[0],
-              email: session.user.email,
-              avatar_url: session.user.user_metadata.avatar_url || session.user.user_metadata.picture,
-              anonymous: false,
-            })
-          }
-
-          // Handle password recovery flow
-          if (event === "PASSWORD_RECOVERY") {
-            console.log("🔑 Password recovery flow initiated")
-          }
-
-          // Handle token refresh
-          if (event === "TOKEN_REFRESHED") {
-            console.log("🔄 Token refreshed successfully")
-          }
-
         } else if (event === "SIGNED_OUT") {
           setUser(null)
           setProfile(null)
