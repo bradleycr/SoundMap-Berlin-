@@ -197,4 +197,4 @@ The SoundMap Berlin app is now a complete, production-ready audio social platfor
 - Security best practices
 - PWA capabilities
 
-**Perfect for Berlin audio exploration! 🎧🗺️** 
+**Perfect for Berlin audio exploration! 🎧🗺️**

@@ -164,4 +164,4 @@ export function useAuthLogic() {
     createProfile,
     debugAuthState,
   }
-} 
+}

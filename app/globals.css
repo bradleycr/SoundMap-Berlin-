@@ -103,34 +103,131 @@
 }
 
 @layer components {
+  /* Enhanced pixel button with proper mobile touch states */
   .pixel-button {
-    @apply bg-stone-800 border-2 border-sage-400 text-sage-400 px-6 py-3 rounded-lg font-pixel text-sm uppercase tracking-wider transition-all duration-200 hover:bg-sage-400 hover:text-stone-900 hover:shadow-lg hover:shadow-sage-400/50 active:scale-95 touch-manipulation;
+    @apply relative bg-stone-800 border-2 border-sage-400 text-sage-400 px-4 py-3 rounded-lg font-pixel text-xs uppercase tracking-wider transition-all duration-200 touch-manipulation;
+    /* Better tap targets for mobile */
+    min-height: 48px;
+    min-width: 48px;
+    /* Prevent text selection */
+    -webkit-user-select: none;
+    user-select: none;
     /* Prevent double-tap zoom */
     touch-action: manipulation;
-    /* Better tap targets */
-    min-height: 44px;
-    min-width: 44px;
+    /* Ensure text stays readable */
+    color: #a8b5a0 !important;
+  }
+
+  .pixel-button:hover {
+    @apply bg-sage-400/20 shadow-lg shadow-sage-400/30;
+    color: #a8b5a0 !important;
+    border-color: #a8b5a0;
+  }
+
+  .pixel-button:active {
+    @apply bg-sage-400/30 scale-95;
+    color: #2d2a26 !important;
+    background-color: #a8b5a0 !important;
+  }
+
+  .pixel-button:disabled {
+    @apply opacity-50 cursor-not-allowed;
+    color: #6b7280 !important;
   }
 
   .pixel-button-coral {
-    @apply bg-stone-800 border-2 border-coral-400 text-coral-400 px-6 py-3 rounded-lg font-pixel text-sm uppercase tracking-wider transition-all duration-200 hover:bg-coral-400 hover:text-stone-900 hover:shadow-lg hover:shadow-coral-400/50 active:scale-95 touch-manipulation;
+    @apply relative bg-stone-800 border-2 border-coral-400 text-coral-400 px-4 py-3 rounded-lg font-pixel text-xs uppercase tracking-wider transition-all duration-200 touch-manipulation;
+    min-height: 48px;
+    min-width: 48px;
+    -webkit-user-select: none;
+    user-select: none;
     touch-action: manipulation;
-    min-height: 44px;
-    min-width: 44px;
+    color: #f87171 !important;
+  }
+
+  .pixel-button-coral:hover {
+    @apply bg-coral-400/20 shadow-lg shadow-coral-400/30;
+    color: #f87171 !important;
+    border-color: #f87171;
+  }
+
+  .pixel-button-coral:active {
+    @apply bg-coral-400/30 scale-95;
+    color: #2d2a26 !important;
+    background-color: #f87171 !important;
+  }
+
+  .pixel-button-coral:disabled {
+    @apply opacity-50 cursor-not-allowed;
+    color: #6b7280 !important;
   }
 
   .pixel-button-mint {
-    @apply bg-stone-800 border-2 border-mint-400 text-mint-400 px-6 py-3 rounded-lg font-pixel text-sm uppercase tracking-wider transition-all duration-200 hover:bg-mint-400 hover:text-stone-900 hover:shadow-lg hover:shadow-mint-400/50 active:scale-95 touch-manipulation;
+    @apply relative bg-stone-800 border-2 border-mint-400 text-mint-400 px-4 py-3 rounded-lg font-pixel text-xs uppercase tracking-wider transition-all duration-200 touch-manipulation;
+    min-height: 48px;
+    min-width: 48px;
+    -webkit-user-select: none;
+    user-select: none;
     touch-action: manipulation;
+    color: #98ddca !important;
+  }
+
+  .pixel-button-mint:hover {
+    @apply bg-mint-400/20 shadow-lg shadow-mint-400/30;
+    color: #98ddca !important;
+    border-color: #98ddca;
+  }
+
+  .pixel-button-mint:active {
+    @apply bg-mint-400/30 scale-95;
+    color: #2d2a26 !important;
+    background-color: #98ddca !important;
+  }
+
+  .pixel-button-mint:disabled {
+    @apply opacity-50 cursor-not-allowed;
+    color: #6b7280 !important;
+  }
+
+  .pixel-button-sand {
+    @apply relative bg-stone-800 border-2 border-sand-400 text-sand-400 px-4 py-3 rounded-lg font-pixel text-xs uppercase tracking-wider transition-all duration-200 touch-manipulation;
+    min-height: 48px;
+    min-width: 48px;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+    color: #d4a574 !important;
+  }
+
+  .pixel-button-sand:hover {
+    @apply bg-sand-400/20 shadow-lg shadow-sand-400/30;
+    color: #d4a574 !important;
+    border-color: #d4a574;
+  }
+
+  .pixel-button-sand:active {
+    @apply bg-sand-400/30 scale-95;
+    color: #2d2a26 !important;
+    background-color: #d4a574 !important;
+  }
+
+  .pixel-button-sand:disabled {
+    @apply opacity-50 cursor-not-allowed;
+    color: #6b7280 !important;
+  }
+
+  /* Compact button variant for mobile */
+  .pixel-button-compact {
+    @apply px-3 py-2 text-xs;
     min-height: 44px;
     min-width: 44px;
   }
 
-  .pixel-button-sand {
-    @apply bg-stone-800 border-2 border-sand-400 text-sand-400 px-6 py-3 rounded-lg font-pixel text-sm uppercase tracking-wider transition-all duration-200 hover:bg-sand-400 hover:text-stone-900 hover:shadow-lg hover:shadow-sand-400/50 active:scale-95 touch-manipulation;
-    touch-action: manipulation;
-    min-height: 44px;
-    min-width: 44px;
+  /* Icon-only button variant */
+  .pixel-button-icon {
+    @apply p-3;
+    min-height: 48px;
+    min-width: 48px;
   }
 
   .scanline-hover {
@@ -147,6 +244,7 @@
     height: 100%;
     background: linear-gradient(90deg, transparent, rgba(168, 181, 160, 0.3), transparent);
     transition: left 0.5s;
+    pointer-events: none;
   }
 
   .scanline-hover:active::before {
@@ -247,6 +345,35 @@
   .homepage-glow {
     filter: drop-shadow(0 0 10px rgba(168, 181, 160, 0.3));
   }
+
+  /* Mobile-specific button improvements */
+  @media (max-width: 768px) {
+    .pixel-button,
+    .pixel-button-coral,
+    .pixel-button-mint,
+    .pixel-button-sand {
+      @apply text-xs px-3 py-2;
+      min-height: 48px;
+      font-size: 10px;
+      line-height: 1.2;
+    }
+
+    .pixel-button-icon {
+      @apply p-2;
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+
+  /* Ensure proper spacing for mobile layouts */
+  .mobile-safe-spacing {
+    @apply px-4 py-2;
+  }
+
+  .mobile-button-grid {
+    @apply grid gap-3;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
 }
 
 @layer utilities {
@@ -292,13 +419,44 @@
   }
 
   @keyframes logo-pulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 1;
       transform: scale(1);
     }
     50% {
       opacity: 0.95;
       transform: scale(1.02);
+    }
+  }
+
+  /* Mobile-specific utilities */
+  .text-mobile-xs {
+    font-size: 10px;
+    line-height: 1.3;
+  }
+
+  .text-mobile-sm {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  /* Responsive text sizing */
+  @media (max-width: 640px) {
+    .responsive-text-lg {
+      font-size: 1.25rem;
+    }
+
+    .responsive-text-xl {
+      font-size: 1.5rem;
+    }
+
+    .responsive-text-2xl {
+      font-size: 1.75rem;
+    }
+
+    .responsive-text-4xl {
+      font-size: 2.25rem;
     }
   }
 }
@@ -331,5 +489,16 @@
   .animate-pulse,
   .animate-ping {
     animation: none !important;
+  }
+}
+
+/* Fix for iOS Safari button appearance */
+@supports (-webkit-touch-callout: none) {
+  .pixel-button,
+  .pixel-button-coral,
+  .pixel-button-mint,
+  .pixel-button-sand {
+    -webkit-appearance: none;
+    -webkit-tap-highlight-color: transparent;
   }
 }

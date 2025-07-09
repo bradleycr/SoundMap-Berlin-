@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Mic, Map, Headphones, PartyPopper, Navigation, Download } from "lucide-react"
+import { Mic, Map, User, Download } from "lucide-react"
 import { useAuth } from "@/app/providers"
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
 export default function HomePage() {
   const { user, signInAnonymously, loading } = useAuth()
@@ -48,7 +47,7 @@ export default function HomePage() {
       const permissions = await Promise.allSettled([
         // Location permission
         new Promise<void>((resolve, reject) => {
-          if (typeof window !== 'undefined' && "geolocation" in navigator) {
+          if (typeof window !== "undefined" && "geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(
               () => resolve(),
               () => resolve(), // Don't block on location denial
@@ -79,7 +78,7 @@ export default function HomePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-stone-900 to-stone-800">
         <div className="text-center">
-          <div className="text-2xl mb-4 animate-pulse font-pixel text-sage-400">LOADING...</div>
+          <div className="text-xl mb-4 animate-pulse font-pixel text-sage-400">LOADING...</div>
         </div>
       </div>
     )
@@ -124,30 +123,29 @@ export default function HomePage() {
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4">
-        <div className="text-center max-w-md mx-auto space-y-8">
-          {/* Logo with branding */}
-          <div className="space-y-4">
-            <h1
-              className="text-4xl md:text-6xl font-pixel flex items-center justify-center gap-3 text-sage-400 neon-glow animate-logo-pulse tracking-tight"
-              style={{ letterSpacing: '-0.04em', fontWeight: 700 }}
-            >
-              <span className="drop-shadow-lg">SoundMap</span>
-              <span className="text-coral-400 drop-shadow-lg" style={{ fontWeight: 900, letterSpacing: '0.01em' }}>Berlin</span>
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4 safe-area-top safe-area-bottom">
+        <div className="text-center max-w-sm mx-auto space-y-6 w-full">
+          {/* Logo with branding - Mobile optimized */}
+          <div className="space-y-3">
+            <h1 className="text-2xl sm:text-4xl md:text-6xl font-pixel text-sage-400 neon-glow animate-logo-pulse tracking-tight leading-tight">
+              <div className="flex flex-col items-center gap-1">
+                <span className="drop-shadow-lg">SoundMap</span>
+                <span className="text-coral-400 drop-shadow-lg text-lg sm:text-2xl md:text-4xl">Berlin</span>
+              </div>
             </h1>
-            <div className="text-sm text-coral-400 font-pixel tracking-wider">BY DAS Y RADIO</div>
+            <div className="text-xs sm:text-sm text-coral-400 font-pixel tracking-wider">BY DAS Y RADIO</div>
             <div className="text-xs text-mint-400 font-pixel">BERLIN AUDIO JOURNEY</div>
           </div>
 
           {/* Subtitle */}
-          <div className="space-y-2 text-xs text-mint-400 font-pixel leading-relaxed">
+          <div className="space-y-1 text-xs text-mint-400 font-pixel leading-relaxed">
             <p>HEADPHONES ON</p>
             <p>WALK THE CITY</p>
             <p>DISCOVER SOUNDS</p>
           </div>
 
           {/* Instructions */}
-          <div className="retro-border p-4 space-y-2 text-xs text-sand-400 font-pixel leading-relaxed bg-stone-900/50 backdrop-blur-sm">
+          <div className="retro-border p-3 space-y-1 text-xs text-sand-400 font-pixel leading-relaxed bg-stone-900/50 backdrop-blur-sm">
             <p>• CLIPS AUTO-PLAY IN ZONES</p>
             <p>• LIKE/DISLIKE TO CURATE</p>
             <p>• RECORD YOUR OWN SOUNDS</p>
@@ -155,49 +153,54 @@ export default function HomePage() {
           </div>
 
           {/* Start Button */}
-          <div className="space-y-4">
-            <Button
+          <div className="space-y-4 w-full">
+            <button
               onClick={handleStartWalk}
               disabled={isStarting}
-              className="pixel-button scanline-hover w-full py-6 text-lg touch-manipulation bg-stone-800/80 backdrop-blur-sm"
+              className="pixel-button scanline-hover w-full py-4 text-sm font-pixel touch-manipulation bg-stone-800/80 backdrop-blur-sm"
             >
               {isStarting ? "STARTING..." : "START WALK"}
-            </Button>
+            </button>
 
-            <div className="grid grid-cols-3 gap-2">
-              <Button
+            {/* Mobile-optimized button grid */}
+            <div className="mobile-button-grid">
+              <button
                 onClick={() => router.push("/record")}
-                className="pixel-button-coral scanline-hover touch-manipulation bg-stone-800/80 backdrop-blur-sm"
+                className="pixel-button-coral scanline-hover touch-manipulation bg-stone-800/80 backdrop-blur-sm flex flex-col items-center gap-1 py-3"
               >
-                RECORD
-              </Button>
-              <Button
+                <Mic className="w-4 h-4" />
+                <span className="text-mobile-xs">RECORD</span>
+              </button>
+              <button
                 onClick={() => router.push("/map")}
-                className="pixel-button-mint scanline-hover touch-manipulation bg-stone-800/80 backdrop-blur-sm"
+                className="pixel-button-mint scanline-hover touch-manipulation bg-stone-800/80 backdrop-blur-sm flex flex-col items-center gap-1 py-3"
               >
-                MAP
-              </Button>
-              <Button
+                <Map className="w-4 h-4" />
+                <span className="text-mobile-xs">MAP</span>
+              </button>
+              <button
                 onClick={() => router.push("/profile")}
-                className="pixel-button-sand scanline-hover touch-manipulation bg-stone-800/80 backdrop-blur-sm"
+                className="pixel-button-sand scanline-hover touch-manipulation bg-stone-800/80 backdrop-blur-sm flex flex-col items-center gap-1 py-3"
               >
-                PROFILE
-              </Button>
+                <User className="w-4 h-4" />
+                <span className="text-mobile-xs">PROFILE</span>
+              </button>
             </div>
           </div>
 
           {/* PWA Install */}
           {installPrompt && (
-            <Button
+            <button
               onClick={handleInstallPWA}
-              className="pixel-button-sand w-full touch-manipulation bg-stone-800/80 backdrop-blur-sm"
+              className="pixel-button-sand w-full touch-manipulation bg-stone-800/80 backdrop-blur-sm flex items-center justify-center gap-2 py-3"
             >
-              INSTALL APP
-            </Button>
+              <Download className="w-4 h-4" />
+              <span className="text-xs">INSTALL APP</span>
+            </button>
           )}
 
           {/* Footer with branding */}
-          <div className="text-xs text-gray-500 font-pixel space-y-1">
+          <div className="text-xs text-gray-500 font-pixel space-y-1 pt-4">
             <div>v1.0.0 • PWA EDITION</div>
             <div className="text-stone-600">POWERED BY DAS Y RADIO</div>
           </div>

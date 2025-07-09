@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase"
 import { useAuth } from "@/app/providers"
 import { OfflineStorage } from "@/lib/storage"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/toast-provider"
 import {
@@ -20,8 +19,6 @@ import {
   LogIn,
   LogOut,
   Mail,
-  Eye,
-  EyeOff,
   Loader2,
   Send,
 } from "lucide-react"
@@ -41,17 +38,10 @@ interface Clip {
 
 type TabType = "recorded" | "liked" | "archived"
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
 export default function ProfilePage() {
-  const {
-    user,
-    profile,
-    loading: authLoading, // Rename to avoid conflict
-    signOut,
-    signInAnonymously,
-    createProfile,
-  } = useAuth()
+  const { user, profile, loading: authLoading, signOut, signInAnonymously, createProfile } = useAuth()
   const router = useRouter()
   const supabase = createClient()
   const storage = OfflineStorage.getInstance()
@@ -61,33 +51,31 @@ export default function ProfilePage() {
   const [recordedClips, setRecordedClips] = useState<Clip[]>([])
   const [likedClips, setLikedClips] = useState<Clip[]>([])
   const [archivedClips, setArchivedClips] = useState<Clip[]>([])
-  const [isLoading, setIsLoading] = useState(true) // For local data loading
-  const [isOnline, setIsOnline] = useState(true) // Default to true, will be updated in useEffect
+  const [isLoading, setIsLoading] = useState(true)
+  const [isOnline, setIsOnline] = useState(true)
   const [showAuthForm, setShowAuthForm] = useState(false)
-  // Magic link only auth state
   const [email, setEmail] = useState("")
   const [displayName, setDisplayName] = useState("")
   const [isEditing, setIsEditing] = useState(false)
-  // const [authLoading, setAuthLoading] = useState(false) // REMOVED - Use authLoading from useAuth hook
 
   // Check for password reset flow
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
-    if (urlParams.get('update-password') === 'true') {
+    if (urlParams.get("update-password") === "true") {
       setShowAuthForm(true)
     }
   }, [])
 
   // Safely initialize online status in the browser
   useEffect(() => {
-    if (typeof window !== 'undefined' && navigator) {
+    if (typeof window !== "undefined" && navigator) {
       setIsOnline(navigator.onLine)
     }
   }, [])
 
   // Monitor online status
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (typeof window === "undefined") return
 
     const handleOnline = () => setIsOnline(true)
     const handleOffline = () => setIsOnline(false)
@@ -119,17 +107,10 @@ export default function ProfilePage() {
 
       try {
         if (isOnline) {
-          // Load clips with timeout
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout')), 5000)
-          )
-          
-          const dataPromise = Promise.all([
-            loadRecordedClips(), 
-            loadLikedClips(), 
-            loadArchivedClips()
-          ])
-          
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000))
+
+          const dataPromise = Promise.all([loadRecordedClips(), loadLikedClips(), loadArchivedClips()])
+
           await Promise.race([dataPromise, timeoutPromise])
         } else {
           loadOfflineData()
@@ -143,22 +124,20 @@ export default function ProfilePage() {
     }
 
     loadProfileData()
-  }, [user?.id, isOnline]) // Only depend on user ID, not the whole user object
+  }, [user, isOnline])
 
   const loadRecordedClips = async () => {
     if (!user) return
 
     try {
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 3000)
-      )
-      
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
+
       const dataPromise = supabase
         .from("clips")
         .select("*")
         .eq("owner", user.id)
         .order("created_at", { ascending: false })
-        .limit(50) // Limit results
+        .limit(50)
 
       const { data, error } = await Promise.race([dataPromise, timeoutPromise])
 
@@ -168,7 +147,6 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error("Error loading recorded clips:", error)
-      // Load from cache on error
       const cached = localStorage.getItem("soundmap_recorded_clips")
       if (cached) {
         setRecordedClips(JSON.parse(cached))
@@ -180,14 +158,12 @@ export default function ProfilePage() {
     if (!user || !profile?.likes?.length) return
 
     try {
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 3000)
-      )
-      
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
+
       const dataPromise = supabase
         .from("clips")
         .select("*")
-        .in("id", profile.likes.slice(0, 50)) // Limit to recent likes
+        .in("id", profile.likes.slice(0, 50))
         .order("created_at", { ascending: false })
 
       const { data, error } = await Promise.race([dataPromise, timeoutPromise])
@@ -209,14 +185,12 @@ export default function ProfilePage() {
     if (!user || !profile?.dislikes?.length) return
 
     try {
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 3000)
-      )
-      
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
+
       const dataPromise = supabase
         .from("clips")
         .select("*")
-        .in("id", profile.dislikes.slice(0, 50)) // Limit to recent dislikes
+        .in("id", profile.dislikes.slice(0, 50))
         .order("created_at", { ascending: false })
 
       const { data, error } = await Promise.race([dataPromise, timeoutPromise])
@@ -248,30 +222,12 @@ export default function ProfilePage() {
     }
   }
 
-  // Commented out Google sign-in for now
-  /*
-  const handleGoogleSignIn = async () => {
-    setAuthLoading(true)
-    try {
-      await signInWithGoogle()
-      setShowAuthForm(false)
-      success("Redirecting to Google sign-in...")
-    } catch (error: any) {
-      console.error("Google sign in error:", error)
-      showError("Google Sign-In Failed", error.message || "Please try again")
-    } finally {
-      setAuthLoading(false)
-    }
-  }
-  */
-
-  // Magic link only auth
   const handleAuth = async () => {
     if (!email) {
       showError("Missing Information", "Please enter your email")
       return
     }
-    // setAuthLoading(true) // REMOVED - Use authLoading from useAuth hook
+
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
@@ -286,8 +242,6 @@ export default function ProfilePage() {
     } catch (error: any) {
       console.error("Magic link error:", error)
       showError("Authentication Failed", error.message || "Please try again")
-    } finally {
-      // setAuthLoading(false) // REMOVED - Use authLoading from useAuth hook
     }
   }
 
@@ -325,10 +279,8 @@ export default function ProfilePage() {
         if (error) throw error
       }
 
-      // Remove from local state
       setRecordedClips((prev) => prev.filter((clip) => clip.id !== clipId))
 
-      // Update localStorage
       const updated = recordedClips.filter((clip) => clip.id !== clipId)
       localStorage.setItem("soundmap_recorded_clips", JSON.stringify(updated))
 
@@ -353,7 +305,7 @@ export default function ProfilePage() {
     if (clips.length === 0) {
       return (
         <div className="text-center py-8">
-          <div className="text-lg font-pixel text-stone-400 mb-2">NO CLIPS YET</div>
+          <div className="text-sm font-pixel text-stone-400 mb-2">NO CLIPS YET</div>
           <div className="text-xs font-pixel text-stone-500">
             {activeTab === "recorded" && "START RECORDING TO SEE YOUR CLIPS"}
             {activeTab === "liked" && "LIKE CLIPS TO SEE THEM HERE"}
@@ -366,10 +318,10 @@ export default function ProfilePage() {
     return (
       <div className="space-y-3">
         {clips.map((clip) => (
-          <div key={clip.id} className="retro-border p-4 space-y-3">
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <div className="text-sm font-pixel text-sand-400 mb-2">{clip.title}</div>
+          <div key={clip.id} className="retro-border p-3 space-y-3">
+            <div className="flex justify-between items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-pixel text-sand-400 mb-2 truncate">{clip.title}</div>
                 <div className="text-xs font-pixel text-stone-400 space-y-1">
                   <div>CREATED: {formatDate(clip.created_at)}</div>
                   <div>
@@ -378,28 +330,28 @@ export default function ProfilePage() {
                   <div>RADIUS: {clip.radius}M</div>
                 </div>
               </div>
-              <div className="text-right space-y-1">
+              <div className="text-right space-y-1 flex-shrink-0">
                 <div className="text-xs font-pixel text-mint-400">♥ {clip.like_count}</div>
                 <div className="text-xs font-pixel text-coral-400">✗ {clip.dislike_count}</div>
               </div>
             </div>
 
             <div className="flex gap-2">
-              <Button
+              <button
                 onClick={() => {
                   const audio = new Audio(clip.url)
                   audio.play().catch(console.error)
                 }}
-                className="pixel-button-mint flex-1"
+                className="pixel-button-mint flex-1 flex items-center justify-center gap-2"
               >
-                <Play className="w-3 h-3 mr-2" />
-                PLAY
-              </Button>
+                <Play className="w-3 h-3" />
+                <span className="text-mobile-xs">PLAY</span>
+              </button>
 
               {showDelete && (
-                <Button onClick={() => handleDeleteClip(clip.id)} className="pixel-button-coral">
+                <button onClick={() => handleDeleteClip(clip.id)} className="pixel-button-coral pixel-button-icon">
                   <Trash2 className="w-3 h-3" />
-                </Button>
+                </button>
               )}
             </div>
           </div>
@@ -408,12 +360,11 @@ export default function ProfilePage() {
     )
   }
 
-  // Use the renamed authLoading for session checks
   if (isLoading || (authLoading && !user)) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-stone-900 to-stone-800 p-4 flex items-center justify-center safe-area-top safe-area-bottom">
         <div className="text-center">
-          <div className="text-2xl mb-4 animate-pulse font-pixel text-sage-400">LOADING PROFILE...</div>
+          <div className="text-xl mb-4 animate-pulse font-pixel text-sage-400">LOADING PROFILE...</div>
           <div className="text-xs font-pixel text-stone-500">
             {authLoading ? "CHECKING SESSION..." : "LOADING DATA..."}
           </div>
@@ -422,44 +373,51 @@ export default function ProfilePage() {
     )
   }
 
-  // Consider user anonymous if no email
   const isAnonymous = !user?.email
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-stone-900 to-stone-800 p-4 safe-area-top safe-area-bottom">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <Button onClick={() => router.push("/")} className="pixel-button-sand">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          BACK
-        </Button>
-        <div className="text-center">
-          <div className="text-lg font-pixel text-sage-400">PROFILE</div>
+      {/* Header - Mobile optimized */}
+      <div className="flex items-center justify-between mb-6 gap-2">
+        <button
+          onClick={() => router.push("/")}
+          className="pixel-button-sand pixel-button-compact flex items-center gap-2"
+        >
+          <ArrowLeft className="w-3 h-3" />
+          <span className="hidden sm:inline text-mobile-xs">BACK</span>
+        </button>
+
+        <div className="text-center flex-1">
+          <div className="text-sm sm:text-lg font-pixel text-sage-400">PROFILE</div>
           <div className="text-xs text-mint-400 font-pixel">{isOnline ? "ONLINE" : "OFFLINE"}</div>
         </div>
-        <Button onClick={() => setShowAuthForm(!showAuthForm)} className={`pixel-button-mint ${isAnonymous ? 'bg-coral-400' : 'bg-mint-400'}`}
-          title={isAnonymous ? 'Sign in or upgrade with email' : 'Sign out'}>
+
+        <button
+          onClick={() => setShowAuthForm(!showAuthForm)}
+          className={`pixel-button-compact ${isAnonymous ? "pixel-button-coral" : "pixel-button-mint"} flex items-center gap-1`}
+          title={isAnonymous ? "Sign in or upgrade with email" : "Sign out"}
+        >
           {isAnonymous ? (
             <>
-              <LogIn className="w-4 h-4 mr-2" />
-              <span className="font-pixel">SIGN IN / UPGRADE</span>
+              <LogIn className="w-3 h-3" />
+              <span className="hidden sm:inline text-mobile-xs">SIGN IN</span>
             </>
           ) : (
             <>
-              <LogOut className="w-4 h-4 mr-2" />
-              <span className="font-pixel">SIGN OUT</span>
+              <LogOut className="w-3 h-3" />
+              <span className="hidden sm:inline text-mobile-xs">SIGN OUT</span>
             </>
           )}
-        </Button>
+        </button>
       </div>
 
       <div className="max-w-md mx-auto space-y-6">
         {/* Profile Info */}
-        <div className="retro-border p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <User className="w-8 h-8 text-sage-400" />
-              <div>
+        <div className="retro-border p-4 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <User className="w-6 h-6 text-sage-400 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
                 {isEditing ? (
                   <Input
                     value={displayName}
@@ -468,31 +426,33 @@ export default function ProfilePage() {
                     maxLength={30}
                   />
                 ) : (
-                  <div className="text-lg font-pixel text-sage-400">{displayName}</div>
+                  <div className="text-sm sm:text-lg font-pixel text-sage-400 truncate">{displayName}</div>
                 )}
-                <div className="text-xs font-pixel text-stone-400">{isAnonymous ? "ANONYMOUS USER" : user?.email}</div>
+                <div className="text-xs font-pixel text-stone-400 truncate">
+                  {isAnonymous ? "ANONYMOUS USER" : user?.email}
+                </div>
               </div>
             </div>
 
             {isAnonymous ? (
-              <Button onClick={() => setIsEditing(!isEditing)} className="pixel-button-sand">
-                <Edit3 className="w-4 h-4" />
-              </Button>
+              <button onClick={() => setIsEditing(!isEditing)} className="pixel-button-sand pixel-button-icon">
+                <Edit3 className="w-3 h-3" />
+              </button>
             ) : (
-              <Button onClick={handleSignOut} className="pixel-button-coral">
-                <LogOut className="w-4 h-4" />
-              </Button>
+              <button onClick={handleSignOut} className="pixel-button-coral pixel-button-icon">
+                <LogOut className="w-3 h-3" />
+              </button>
             )}
           </div>
 
           {isEditing && (
             <div className="flex gap-2">
-              <Button onClick={handleUpdateProfile} className="pixel-button-mint flex-1">
+              <button onClick={handleUpdateProfile} className="pixel-button-mint flex-1">
                 SAVE
-              </Button>
-              <Button onClick={() => setIsEditing(false)} className="pixel-button-coral flex-1">
+              </button>
+              <button onClick={() => setIsEditing(false)} className="pixel-button-coral flex-1">
                 CANCEL
-              </Button>
+              </button>
             </div>
           )}
 
@@ -515,16 +475,15 @@ export default function ProfilePage() {
 
         {/* Magic Link Auth Form */}
         {showAuthForm && isAnonymous && (
-          <div className="retro-border p-6 space-y-4">
+          <div className="retro-border p-4 space-y-4">
             <div className="text-center">
-              <div className="text-lg font-pixel text-sage-400 mb-2">SAVE YOUR ACCOUNT</div>
+              <div className="text-sm font-pixel text-sage-400 mb-2">SAVE YOUR ACCOUNT</div>
               <div className="text-xs font-pixel text-stone-400">NEVER LOSE YOUR CLIPS AND LIKES</div>
             </div>
 
             <div className="space-y-3">
-              {/* Email field for magic link */}
               <div className="space-y-2">
-                <label className="text-sm font-pixel text-sand-400">EMAIL</label>
+                <label className="text-xs font-pixel text-sand-400">EMAIL</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-stone-400" />
                   <Input
@@ -539,7 +498,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-3">
-              <Button
+              <button
                 onClick={handleAuth}
                 disabled={authLoading || !email}
                 className="pixel-button-coral w-full flex items-center justify-center gap-2"
@@ -547,44 +506,47 @@ export default function ProfilePage() {
                 {authLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    SENDING MAGIC LINK...
+                    <span className="text-mobile-xs">SENDING...</span>
                   </>
                 ) : (
-                  "SEND MAGIC LINK"
+                  <>
+                    <Send className="w-4 h-4" />
+                    <span className="text-mobile-xs">SEND MAGIC LINK</span>
+                  </>
                 )}
-              </Button>
+              </button>
             </div>
           </div>
         )}
 
-        {/* Tabs */}
+        {/* Tabs - Mobile optimized */}
         <div className="flex gap-1 retro-border p-1">
           <button
             onClick={() => setActiveTab("recorded")}
-            className={`flex-1 py-3 px-4 font-pixel text-xs uppercase transition-all ${
+            className={`flex-1 py-3 px-2 font-pixel text-xs uppercase transition-all ${
               activeTab === "recorded" ? "bg-coral-400 text-stone-900" : "text-coral-400 hover:bg-coral-400/20"
             }`}
           >
-            <Mic className="w-4 h-4 mx-auto mb-1" />
-            RECORDED
+            <Mic className="w-3 h-3 mx-auto mb-1" />
+            <div className="text-mobile-xs">RECORDED</div>
           </button>
           <button
             onClick={() => setActiveTab("liked")}
-            className={`flex-1 py-3 px-4 font-pixel text-xs uppercase transition-all ${
+            className={`flex-1 py-3 px-2 font-pixel text-xs uppercase transition-all ${
               activeTab === "liked" ? "bg-mint-400 text-stone-900" : "text-mint-400 hover:bg-mint-400/20"
             }`}
           >
-            <Heart className="w-4 h-4 mx-auto mb-1" />
-            LIKED
+            <Heart className="w-3 h-3 mx-auto mb-1" />
+            <div className="text-mobile-xs">LIKED</div>
           </button>
           <button
             onClick={() => setActiveTab("archived")}
-            className={`flex-1 py-3 px-4 font-pixel text-xs uppercase transition-all ${
+            className={`flex-1 py-3 px-2 font-pixel text-xs uppercase transition-all ${
               activeTab === "archived" ? "bg-sand-400 text-stone-900" : "text-sand-400 hover:bg-sand-400/20"
             }`}
           >
-            <Archive className="w-4 h-4 mx-auto mb-1" />
-            ARCHIVED
+            <Archive className="w-3 h-3 mx-auto mb-1" />
+            <div className="text-mobile-xs">ARCHIVED</div>
           </button>
         </div>
 

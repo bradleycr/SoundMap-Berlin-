@@ -87,4 +87,4 @@ export function WaveformVisualizer({
   }, [stream, isRecording, width, height, barWidth, barGap, backgroundColor, barColor])
 
   return <canvas ref={canvasRef} width={width} height={height} className="mx-auto" />
-} 
+}
