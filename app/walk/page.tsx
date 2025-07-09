@@ -91,7 +91,7 @@ export default function WalkPage() {
         const position = await Promise.race([
           getCurrentLocation(),
           locationTimeout
-        ]).catch(() => ({ latitude: 52.52, longitude: 13.405 })) // Berlin fallback
+        ]).catch(() => ({ lat: 52.52, lng: 13.405 })) // Berlin fallback
         
         setCurrentPosition(position)
 

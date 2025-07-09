@@ -124,11 +124,8 @@ export function AudioRecorder() {
         return
       }
 
-      // Get location (fallback to Berlin if unavailable)
-      const location = await getCurrentLocation().catch(() => ({
-        latitude: 52.52,
-        longitude: 13.405,
-      }))
+      // Get location (fallback handled inside getCurrentLocation)
+      const location = await getCurrentLocation()
 
       // Generate filename
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
@@ -148,8 +145,8 @@ export function AudioRecorder() {
       // Save metadata to database
       const clipData = {
         title: title.trim(),
-        lat: location.latitude,
-        lng: location.longitude,
+        lat: location.lat,
+        lng: location.lng,
         radius: radius,
         url: publicUrl,
         owner: user.id, // Always use user.id since we have a valid session
