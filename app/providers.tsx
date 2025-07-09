@@ -10,7 +10,6 @@ interface AuthContextType {
   profile: any | null
   loading: boolean
   signInAnonymously: () => Promise<void>
-  // signInWithGoogle: () => Promise<void>  // Disabled for now
   signOut: () => Promise<void>
   createProfile: (userData?: any) => Promise<void>
   debugAuthState: () => void
@@ -21,7 +20,6 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   signInAnonymously: async () => {},
-  // signInWithGoogle: async () => {}, // Disabled for now
   signOut: async () => {},
   createProfile: async () => {},
   debugAuthState: () => {},
@@ -29,36 +27,18 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext)
 
-/**
- * Enhanced Auth Provider with Modern Google Sign-In
- * Uses proper OAuth flow with PKCE and secure redirects
- */
 export function Providers({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
-  /**
-   * Anonymous sign-in using Supabase's built-in anonymous auth
-   * This creates a real Supabase session that works with RLS
-   */
   const signInAnonymously = async () => {
     try {
-      console.log("🔐 Attempting anonymous sign in...")
-
       const { data, error } = await supabase.auth.signInAnonymously()
-
-      if (error) {
-        console.error("❌ Anonymous sign in failed:", error.message)
-        throw error
-      }
-
+      if (error) throw error
       if (data.user) {
-        console.log("✅ Anonymous user created:", data.user.id)
         setUser(data.user)
-        
-        // Create profile for anonymous user
         await createProfile({
           id: data.user.id,
           name: "Anonymous User",
@@ -66,35 +46,20 @@ export function Providers({ children }: { children: React.ReactNode }) {
         })
       }
     } catch (error) {
-      console.error("❌ Anonymous sign in error:", error)
-      throw error
+      console.error("Anonymous sign in error:", error)
     }
   }
 
-  /**
-   * Sign out and clear all data
-   */
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut()
-      if (error) {
-        console.error("❌ Sign out error:", error)
-        throw error
-      }
-
+      await supabase.auth.signOut()
       setUser(null)
       setProfile(null)
-      console.log("✅ Signed out successfully")
     } catch (error) {
-      console.error("❌ Sign out error:", error)
-      throw error
+      console.error("Sign out error:", error)
     }
   }
 
-  /**
-   * Create or update user profile
-   * Works with both anonymous and authenticated users
-   */
   const createProfile = async (userData?: any) => {
     const currentUser = userData || user
     if (!currentUser) return
@@ -104,11 +69,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       name: currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || userData?.name || "Anonymous User",
       email: currentUser.email || null,
       avatar_url: currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || null,
-      anonymous: userData?.anonymous || false,
-      likes: [],
-      dislikes: [],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      anonymous: userData?.anonymous || !currentUser.email,
     }
 
     try {
@@ -117,111 +78,58 @@ export function Providers({ children }: { children: React.ReactNode }) {
         .upsert(profileData, { onConflict: "id" })
         .select()
         .single()
-
-      if (error) {
-        console.error("❌ Profile creation failed:", error.message)
-        return
-      }
-
+      if (error) throw error
       setProfile(data)
-      console.log("✅ Profile created/updated in database")
     } catch (error) {
-      console.error("❌ Profile creation error:", error)
+      console.error("Profile creation/update error:", error)
     }
   }
 
   const getProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
-
-      if (error) {
-        console.error("❌ Profile fetch error:", error.message)
-        return
-      }
-
-      setProfile(data)
-      console.log("✅ Profile loaded")
+      if (error && error.code !== 'PGRST116') throw error // Ignore no rows found
+      if (data) setProfile(data)
     } catch (error) {
-      console.error("❌ Profile fetch error:", error)
+      console.error("Profile fetch error:", error)
     }
   }
 
   const debugAuthState = () => {
-    console.log("🔍 Auth Debug State:")
-    console.log(
-      "User:",
-      user
-        ? {
-            id: user.id,
-            email: user.email,
-            anonymous: user.user_metadata?.anonymous,
-            provider: user.app_metadata?.provider,
-          }
-        : "null",
-    )
-    console.log("Profile:", profile)
-    console.log("Loading:", loading)
+    console.log("Auth Debug:", { user, profile, loading })
   }
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      const FALLBACK_TIMEOUT = 8000 // ms
-      const timeoutId = setTimeout(() => {
-        console.warn("⚠️  Supabase session request timed-out – continuing offline");
-        setLoading(false)
-      }, FALLBACK_TIMEOUT)
-
-      try {
-        console.log("🔄 Initializing auth with new database...")
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession()
-
-        if (error) {
-          console.warn("⚠️ Session check error:", error)
-        }
-
-        if (session?.user) {
-          setUser(session.user)
-          await getProfile(session.user.id)
-        }
-      } catch (error) {
-        console.warn("⚠️ Auth initialization error:", error)
-      } finally {
-        clearTimeout(timeoutId)
-        setLoading(false)
+    const initializeSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        setUser(session.user)
+        await getProfile(session.user.id)
       }
+      setLoading(false)
     }
 
-    initializeAuth()
+    initializeSession()
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("🔄 Auth state changed:", event, session?.user?.id)
-      try {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user ?? null)
         if (session?.user) {
-          setUser(session.user)
           await getProfile(session.user.id)
-          // On magic link sign-in, ensure profile is created and anonymous is false
           if (event === "SIGNED_IN") {
             await createProfile({
               id: session.user.id,
-              name: session.user.user_metadata?.display_name || session.user.email?.split("@")[0] || "User",
+              name: session.user.user_metadata?.display_name || session.user.email?.split("@")[0],
               email: session.user.email,
               anonymous: false,
             })
           }
-        } else if (event === "SIGNED_OUT") {
-          setUser(null)
+        } else {
           setProfile(null)
         }
-      } catch (error) {
-        console.error("❌ Auth state change error:", error)
+        setLoading(false)
       }
-    })
+    )
 
     return () => subscription.unsubscribe()
   }, [])
@@ -233,7 +141,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
         profile,
         loading,
         signInAnonymously,
-        // signInWithGoogle,  // Disabled for now
         signOut,
         createProfile,
         debugAuthState,
@@ -242,4 +149,4 @@ export function Providers({ children }: { children: React.ReactNode }) {
       {children}
     </AuthContext.Provider>
   )
-}
+} 

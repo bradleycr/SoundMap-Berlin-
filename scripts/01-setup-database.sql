@@ -8,7 +8,9 @@ CREATE EXTENSION IF NOT EXISTS "postgis";
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT,
+  email TEXT,
   avatar_url TEXT,
+  anonymous BOOLEAN DEFAULT false,
   likes UUID[] DEFAULT '{}',
   dislikes UUID[] DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW(),

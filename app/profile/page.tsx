@@ -23,6 +23,7 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  Send,
 } from "lucide-react"
 
 interface Clip {
@@ -43,7 +44,14 @@ type TabType = "recorded" | "liked" | "archived"
 export const dynamic = 'force-dynamic'
 
 export default function ProfilePage() {
-  const { user, profile, signInAnonymously, /* signInWithGoogle, */ signOut, createProfile } = useAuth()
+  const {
+    user,
+    profile,
+    loading: authLoading, // Rename to avoid conflict
+    signOut,
+    signInAnonymously,
+    createProfile,
+  } = useAuth()
   const router = useRouter()
   const supabase = createClient()
   const storage = OfflineStorage.getInstance()
@@ -53,19 +61,19 @@ export default function ProfilePage() {
   const [recordedClips, setRecordedClips] = useState<Clip[]>([])
   const [likedClips, setLikedClips] = useState<Clip[]>([])
   const [archivedClips, setArchivedClips] = useState<Clip[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(true) // For local data loading
   const [isOnline, setIsOnline] = useState(true) // Default to true, will be updated in useEffect
   const [showAuthForm, setShowAuthForm] = useState(false)
-  // Remove password state for magic link only
+  // Magic link only auth state
+  const [email, setEmail] = useState("")
   const [displayName, setDisplayName] = useState("")
   const [isEditing, setIsEditing] = useState(false)
-  const [authLoading, setAuthLoading] = useState(false)
+  // const [authLoading, setAuthLoading] = useState(false) // REMOVED - Use authLoading from useAuth hook
 
   // Check for password reset flow
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     if (urlParams.get('update-password') === 'true') {
-      setAuthMode('reset')
       setShowAuthForm(true)
     }
   }, [])
@@ -93,25 +101,37 @@ export default function ProfilePage() {
     }
   }, [])
 
-  // Load profile data
+  // Load profile data - separate effects to prevent loops
+  useEffect(() => {
+    if (user && profile) {
+      setDisplayName(profile.name || "Anonymous User")
+    }
+  }, [user, profile])
+
   useEffect(() => {
     const loadProfileData = async () => {
-      setIsLoading(true)
-
       if (!user) {
-        await signInAnonymously()
         setIsLoading(false)
         return
       }
 
-      setDisplayName(profile?.name || "Anonymous User")
+      setIsLoading(true)
 
       try {
         if (isOnline) {
-          // Load from Supabase
-          await Promise.all([loadRecordedClips(), loadLikedClips(), loadArchivedClips()])
+          // Load clips with timeout
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), 5000)
+          )
+          
+          const dataPromise = Promise.all([
+            loadRecordedClips(), 
+            loadLikedClips(), 
+            loadArchivedClips()
+          ])
+          
+          await Promise.race([dataPromise, timeoutPromise])
         } else {
-          // Load from offline storage
           loadOfflineData()
         }
       } catch (error) {
@@ -123,17 +143,24 @@ export default function ProfilePage() {
     }
 
     loadProfileData()
-  }, [user, profile, isOnline])
+  }, [user?.id, isOnline]) // Only depend on user ID, not the whole user object
 
   const loadRecordedClips = async () => {
     if (!user) return
 
     try {
-      const { data, error } = await supabase
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 3000)
+      )
+      
+      const dataPromise = supabase
         .from("clips")
         .select("*")
         .eq("owner", user.id)
         .order("created_at", { ascending: false })
+        .limit(50) // Limit results
+
+      const { data, error } = await Promise.race([dataPromise, timeoutPromise])
 
       if (data && !error) {
         setRecordedClips(data)
@@ -141,6 +168,11 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error("Error loading recorded clips:", error)
+      // Load from cache on error
+      const cached = localStorage.getItem("soundmap_recorded_clips")
+      if (cached) {
+        setRecordedClips(JSON.parse(cached))
+      }
     }
   }
 
@@ -148,11 +180,17 @@ export default function ProfilePage() {
     if (!user || !profile?.likes?.length) return
 
     try {
-      const { data, error } = await supabase
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 3000)
+      )
+      
+      const dataPromise = supabase
         .from("clips")
         .select("*")
-        .in("id", profile.likes)
+        .in("id", profile.likes.slice(0, 50)) // Limit to recent likes
         .order("created_at", { ascending: false })
+
+      const { data, error } = await Promise.race([dataPromise, timeoutPromise])
 
       if (data && !error) {
         setLikedClips(data)
@@ -160,6 +198,10 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error("Error loading liked clips:", error)
+      const cached = localStorage.getItem("soundmap_liked_clips")
+      if (cached) {
+        setLikedClips(JSON.parse(cached))
+      }
     }
   }
 
@@ -167,11 +209,17 @@ export default function ProfilePage() {
     if (!user || !profile?.dislikes?.length) return
 
     try {
-      const { data, error } = await supabase
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 3000)
+      )
+      
+      const dataPromise = supabase
         .from("clips")
         .select("*")
-        .in("id", profile.dislikes)
+        .in("id", profile.dislikes.slice(0, 50)) // Limit to recent dislikes
         .order("created_at", { ascending: false })
+
+      const { data, error } = await Promise.race([dataPromise, timeoutPromise])
 
       if (data && !error) {
         setArchivedClips(data)
@@ -179,6 +227,10 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error("Error loading archived clips:", error)
+      const cached = localStorage.getItem("soundmap_archived_clips")
+      if (cached) {
+        setArchivedClips(JSON.parse(cached))
+      }
     }
   }
 
@@ -219,7 +271,7 @@ export default function ProfilePage() {
       showError("Missing Information", "Please enter your email")
       return
     }
-    setAuthLoading(true)
+    // setAuthLoading(true) // REMOVED - Use authLoading from useAuth hook
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
@@ -235,7 +287,7 @@ export default function ProfilePage() {
       console.error("Magic link error:", error)
       showError("Authentication Failed", error.message || "Please try again")
     } finally {
-      setAuthLoading(false)
+      // setAuthLoading(false) // REMOVED - Use authLoading from useAuth hook
     }
   }
 
@@ -356,11 +408,15 @@ export default function ProfilePage() {
     )
   }
 
-  if (isLoading) {
+  // Use the renamed authLoading for session checks
+  if (isLoading || (authLoading && !user)) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-stone-900 to-stone-800 p-4 flex items-center justify-center safe-area-top safe-area-bottom">
         <div className="text-center">
           <div className="text-2xl mb-4 animate-pulse font-pixel text-sage-400">LOADING PROFILE...</div>
+          <div className="text-xs font-pixel text-stone-500">
+            {authLoading ? "CHECKING SESSION..." : "LOADING DATA..."}
+          </div>
         </div>
       </div>
     )
@@ -457,25 +513,16 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Enhanced Auth Form with Password Reset Support */}
-        {showAuthForm && (isAnonymous || authMode === "reset") && (
+        {/* Magic Link Auth Form */}
+        {showAuthForm && isAnonymous && (
           <div className="retro-border p-6 space-y-4">
             <div className="text-center">
-              {authMode === "reset" ? (
-                <>
-                  <div className="text-lg font-pixel text-coral-400 mb-2">UPDATE PASSWORD</div>
-                  <div className="text-xs font-pixel text-stone-400">ENTER YOUR NEW PASSWORD</div>
-                </>
-              ) : (
-                <>
-                  <div className="text-lg font-pixel text-sage-400 mb-2">SAVE YOUR ACCOUNT</div>
-                  <div className="text-xs font-pixel text-stone-400">NEVER LOSE YOUR CLIPS AND LIKES</div>
-                </>
-              )}
+              <div className="text-lg font-pixel text-sage-400 mb-2">SAVE YOUR ACCOUNT</div>
+              <div className="text-xs font-pixel text-stone-400">NEVER LOSE YOUR CLIPS AND LIKES</div>
             </div>
 
             <div className="space-y-3">
-              {/* Only email field for magic link */}
+              {/* Email field for magic link */}
               <div className="space-y-2">
                 <label className="text-sm font-pixel text-sand-400">EMAIL</label>
                 <div className="relative">
@@ -489,18 +536,6 @@ export default function ProfilePage() {
                   />
                 </div>
               </div>
-
-              {authMode === "signup" && (
-                <div className="space-y-2">
-                  <label className="text-sm font-pixel text-sand-400">DISPLAY NAME</label>
-                  <Input
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="bg-stone-800 border-sage-400 text-sage-400 font-pixel text-sm"
-                    placeholder="Your Name"
-                  />
-                </div>
-              )}
             </div>
 
             <div className="space-y-3">
@@ -518,8 +553,6 @@ export default function ProfilePage() {
                   "SEND MAGIC LINK"
                 )}
               </Button>
-
-              {/* No alternate flows for magic link only */}
             </div>
           </div>
         )}

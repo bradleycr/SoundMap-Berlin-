@@ -27,7 +27,12 @@ interface Clip {
 }
 
 export default function WalkPage() {
-  const { user, profile, signInAnonymously } = useAuth()
+  const {
+    user,
+    profile,
+    loading: authLoading, // Rename to avoid conflict
+    signInAnonymously,
+  } = useAuth()
   const router = useRouter()
   const supabase = createClient()
   const storage = OfflineStorage.getInstance()
@@ -40,7 +45,7 @@ export default function WalkPage() {
   const [userLikes, setUserLikes] = useState<string[]>([])
   const [userDislikes, setUserDislikes] = useState<string[]>([])
   const [showMap, setShowMap] = useState(true)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(true) // For local data loading
   const [isOnline, setIsOnline] = useState(true) // Default to true, will be updated in useEffect
   const watchIdRef = useRef<number | null>(null)
 
@@ -67,33 +72,60 @@ export default function WalkPage() {
     }
   }, [])
 
-  // Initialize user and location
+  // Initialize location and preferences
   useEffect(() => {
     const initialize = async () => {
       setIsLoading(true)
 
-      // Ensure we have a user
-      if (!user) {
-        await signInAnonymously()
+      try {
+        // Load preferences from storage (fast)
+        const prefs = storage.getPreferences()
+        setUserLikes(prefs.likes)
+        setUserDislikes(prefs.dislikes)
+
+        // Get initial position with timeout
+        const locationTimeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Location timeout')), 3000)
+        )
+        
+        const position = await Promise.race([
+          getCurrentLocation(),
+          locationTimeout
+        ]).catch(() => ({ latitude: 52.52, longitude: 13.405 })) // Berlin fallback
+        
+        setCurrentPosition(position)
+
+        // Load clips with timeout
+        const clipsTimeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Clips timeout')), 5000)
+        )
+        
+        await Promise.race([
+          loadClips(position.lat, position.lng),
+          clipsTimeout
+        ]).catch((error) => {
+          console.warn("Failed to load clips:", error)
+          // Load from offline storage as fallback
+          const offlineClips = storage.getClips()
+          setAllClips(offlineClips)
+        })
+
+      } catch (error) {
+        console.error("Initialization error:", error)
       }
-
-      // Load preferences from storage
-      const prefs = storage.getPreferences()
-      setUserLikes(prefs.likes)
-      setUserDislikes(prefs.dislikes)
-
-      // Get initial position
-      const position = await getCurrentLocation()
-      setCurrentPosition(position)
-
-      // Load clips (online or offline)
-      await loadClips(position.lat, position.lng)
 
       setIsLoading(false)
     }
 
     initialize()
-  }, [user, signInAnonymously])
+  }, []) // Remove user dependency to prevent loops
+
+  // Initialize user in background if needed
+  useEffect(() => {
+    if (!user && !authLoading) {
+      signInAnonymously().catch(console.error)
+    }
+  }, [user, authLoading, signInAnonymously])
 
   // Start location watching after initial load
   useEffect(() => {
@@ -123,30 +155,50 @@ export default function WalkPage() {
   const loadClips = async (lat: number, lng: number) => {
     try {
       if (isOnline) {
-        // Try to fetch from Supabase
-        const [allClipsResult, nearbyResult] = await Promise.allSettled([
-          supabase.from("clips").select("*").order("created_at", { ascending: false }),
-          supabase.rpc("get_nearby", { lat, lng, max_dist: 200 }),
-        ])
+        // Only load all clips once, then just update nearby
+        const promises = []
+        
+        if (allClips.length === 0) {
+          promises.push(
+            supabase.from("clips").select("*").order("created_at", { ascending: false }).limit(100)
+          )
+        }
+        
+        promises.push(
+          supabase.rpc("get_nearby", { lat, lng, max_dist: 200 })
+        )
 
-        if (allClipsResult.status === "fulfilled" && allClipsResult.value.data) {
-          setAllClips(allClipsResult.value.data)
-          await storage.storeClips(allClipsResult.value.data)
+        const results = await Promise.allSettled(promises)
+        
+        // Update all clips if we fetched them
+        if (allClips.length === 0 && results[0] && results[0].status === "fulfilled") {
+          const clipsData = results[0].value.data
+          if (clipsData) {
+            setAllClips(clipsData)
+            storage.storeClips(clipsData).catch(console.error)
+          }
         }
 
-        if (nearbyResult.status === "fulfilled" && nearbyResult.value.data) {
-          const filteredClips = nearbyResult.value.data.filter((clip: Clip) => !userDislikes.includes(clip.id))
-          const rankedClips = rankClipsByLikesAndRecency(filteredClips)
-          setNearbyClips(rankedClips)
+        // Update nearby clips
+        const nearbyIndex = allClips.length === 0 ? 1 : 0
+        if (results[nearbyIndex] && results[nearbyIndex].status === "fulfilled") {
+          const nearbyData = results[nearbyIndex].value.data
+          if (nearbyData) {
+            const filteredClips = nearbyData.filter((clip: Clip) => !userDislikes.includes(clip.id))
+            const rankedClips = rankClipsByLikesAndRecency(filteredClips)
+            setNearbyClips(rankedClips)
 
-          if (rankedClips.length > 0 && !isPlaying && currentClipIndex === 0) {
-            setIsPlaying(true)
+            if (rankedClips.length > 0 && !isPlaying && currentClipIndex === 0) {
+              setIsPlaying(true)
+            }
           }
         }
       } else {
         // Load from offline storage
         const offlineClips = storage.getClips()
-        setAllClips(offlineClips)
+        if (allClips.length === 0) {
+          setAllClips(offlineClips)
+        }
 
         // Calculate nearby clips offline
         const nearby = offlineClips.filter((clip: Clip) => {
@@ -160,7 +212,9 @@ export default function WalkPage() {
       console.error("Error loading clips:", error)
       // Fallback to offline storage
       const offlineClips = storage.getClips()
-      setAllClips(offlineClips)
+      if (allClips.length === 0) {
+        setAllClips(offlineClips)
+      }
     }
   }
 
@@ -187,8 +241,6 @@ export default function WalkPage() {
 
       const totalScoreA = likeScoreA + recencyScoreA
       const totalScoreB = likeScoreB + recencyScoreB
-
-      console.log(`🎵 Ranking: ${a.title} (${totalScoreA.toFixed(1)}) vs ${b.title} (${totalScoreB.toFixed(1)})`)
 
       return totalScoreB - totalScoreA
     })
@@ -267,12 +319,14 @@ export default function WalkPage() {
 
   const currentClip = nearbyClips[currentClipIndex]
 
-  if (isLoading) {
+  if (isLoading || (authLoading && !currentPosition)) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-stone-900 to-stone-800 p-4 flex items-center justify-center safe-area-top safe-area-bottom">
         <div className="text-center">
           <div className="text-2xl mb-4 animate-pulse font-pixel text-sage-400">LOCATING...</div>
-          <div className="text-sm font-pixel text-mint-400">FINDING NEARBY SOUNDS</div>
+          <div className="text-sm font-pixel text-mint-400">
+            {authLoading ? "CHECKING SESSION..." : "GETTING LOCATION..."}
+          </div>
         </div>
       </div>
     )
