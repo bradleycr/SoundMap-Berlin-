@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase"
+import { createClient, getAuthCallbackUrl } from "@/lib/supabase"
 import { useAuth } from "@/app/providers"
 import { OfflineStorage } from "@/lib/storage"
 import { Input } from "@/components/ui/input"
@@ -232,7 +232,7 @@ export default function ProfilePage() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: getAuthCallbackUrl(),
         },
       })
       if (error) throw error
