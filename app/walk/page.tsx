@@ -150,7 +150,7 @@ export default function WalkPage() {
         navigator.geolocation.clearWatch(watchIdRef.current)
       }
     }
-  }, [currentPosition, isLoading])
+  }, [isLoading]) // Dependency only on isLoading to start the watch once
 
   const loadClips = async (lat: number, lng: number) => {
     try {
