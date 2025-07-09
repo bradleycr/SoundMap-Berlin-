@@ -23,7 +23,9 @@ const config = withPWA({
   dest: 'public',
   register: true,
   skipWaiting: true,
+  cleanupOutdatedCaches: true, // Clean up old caches on deploy
   disable: process.env.NODE_ENV === 'development',
+  buildExcludes: [/app-build-manifest\.json$/], // Ignore problematic manifest
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/.*\.(?:png|jpg|jpeg|svg|gif|webp)$/,
