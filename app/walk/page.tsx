@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase"
-import { useAuth } from "../providers"
+import { useAuth } from "@/app/providers"
 import { Button } from "@/components/ui/button"
 import { AudioPlayer } from "@/components/audio-player"
 import { BerlinMap } from "@/components/berlin-map"

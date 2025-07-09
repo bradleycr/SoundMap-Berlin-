@@ -2,7 +2,7 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Press_Start_2P } from "next/font/google"
 import "./globals.css"
-import { Providers } from "./providers"
+import { AuthProviderWrapper } from "./auth-provider-wrapper"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { ToastProvider } from "@/components/toast-provider"
 
@@ -49,6 +49,12 @@ export const viewport: Viewport = {
  * Provides global providers and error boundaries
  * Includes PWA metadata and mobile optimizations
  */
+function ProvidersWrapper({ children }: { children: React.ReactNode }) {
+  // Use the new hook to get auth state and actions
+  const auth = useAuthLogic()
+  return <AuthProvider value={auth}>{children}</AuthProvider>
+}
+
 export default function RootLayout({
   children,
 }: {
@@ -92,7 +98,7 @@ export default function RootLayout({
       <body className="bg-stone-900 text-sage-400 font-pixel antialiased safe-area-top safe-area-bottom">
         <ErrorBoundary>
           <ToastProvider>
-            <Providers>{children}</Providers>
+            <AuthProviderWrapper>{children}</AuthProviderWrapper>
           </ToastProvider>
         </ErrorBoundary>
       </body>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createClient, testSupabaseConnection } from "@/lib/supabase"
-import { useAuth } from "../providers"
+import { useAuth } from "@/app/providers"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Database, User, Wifi, AlertCircle, CheckCircle } from "lucide-react"
 
