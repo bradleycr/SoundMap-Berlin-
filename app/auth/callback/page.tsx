@@ -3,8 +3,7 @@
 import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase"
-
-export const dynamic = 'force-dynamic'
+import dynamic from "next/dynamic"
 
 function AuthCallbackContent() {
   const router = useRouter()
@@ -243,3 +242,16 @@ export default function AuthCallbackPage() {
     </Suspense>
   )
 }
+
+// Wrap the page in next/dynamic to ensure it's only rendered on the client side.
+// This prevents build errors during prerendering when environment variables are not available.
+export default dynamic(() => Promise.resolve(AuthCallbackPage), {
+  ssr: false,
+  loading: () => (
+    <div className="min-h-screen bg-gradient-to-b from-stone-900 to-stone-800 flex items-center justify-center p-4">
+      <div className="text-center space-y-4">
+        <div className="text-2xl font-pixel text-sage-400 animate-pulse">LOADING...</div>
+      </div>
+    </div>
+  ),
+})
