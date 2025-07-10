@@ -7,7 +7,7 @@ const nextConfig = {
     serverComponentsExternalPackages: ['@supabase/supabase-js'],
     // Opt-out of automatic vendor-chunk extraction that broke the build
     optimizePackageImports: [],
-    instrumentationHook: true,
+    // instrumentationHook completely disabled - causing register function errors
   },
   eslint: {
     ignoreDuringBuilds: true,
