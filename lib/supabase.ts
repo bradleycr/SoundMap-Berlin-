@@ -63,13 +63,16 @@ function createTimeoutPromise(ms: number): Promise<never> {
  */
 async function testConnection(client: ReturnType<typeof createBrowserClient>): Promise<boolean> {
   try {
+    console.log("testConnection: Performing query to test connection.");
     const connectionTest = client.from("clips").select("count").limit(1)
     const timeoutPromise = createTimeoutPromise(CONNECTION_TIMEOUT)
     
     await Promise.race([connectionTest, timeoutPromise])
+    console.log("testConnection: Query succeeded.");
     return true
   } catch (error) {
     console.warn("⚠️ Supabase connection test failed:", error)
+    console.log("testConnection: Query failed or timed out.");
     return false
   }
 }
@@ -79,13 +82,16 @@ async function testConnection(client: ReturnType<typeof createBrowserClient>): P
  * Enhanced with connection testing and timeout handling
  */
 export function createClient() {
+  console.log("createClient: Called.");
   // Return existing instance if available
   if (supabaseInstance) {
+    console.log("createClient: Returning existing instance.");
     return supabaseInstance
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  console.log(`createClient: ENV VARS - URL set: ${!!supabaseUrl}, Key set: ${!!supabaseAnonKey}`);
 
   // Validate configuration
   if (!supabaseUrl || !supabaseAnonKey) {
@@ -94,6 +100,7 @@ export function createClient() {
   }
 
   try {
+    console.log("createClient: Creating new Supabase client instance.");
     // Create new client instance
     supabaseInstance = createBrowserClient(supabaseUrl, supabaseAnonKey, {
       auth: {
@@ -136,23 +143,28 @@ export function getSupabaseClient() {
  * Test Supabase connection with retries
  */
 export async function testSupabaseConnection(): Promise<{ success: boolean; error?: string; retries?: number }> {
+  console.log("testSupabaseConnection: Starting connection test...");
   let lastError: Error | null = null
   
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    console.log(`testSupabaseConnection: Attempt #${attempt}`);
     try {
       const client = createClient()
       const isConnected = await testConnection(client)
       
       if (isConnected) {
+        console.log(`testSupabaseConnection: Attempt #${attempt} was successful.`);
         if (process.env.NODE_ENV === 'development') {
           console.log(`✅ Supabase connection successful${attempt > 1 ? ` (attempt ${attempt})` : ''}`)
         }
         return { success: true, retries: attempt > 1 ? attempt : undefined }
       }
       
+      console.warn(`testSupabaseConnection: Attempt #${attempt} failed (isConnected is false). Throwing error.`);
       throw new Error("Connection test failed")
     } catch (error) {
       lastError = error as Error
+      console.error(`testSupabaseConnection: Caught error on attempt #${attempt}.`, error);
       
       if (attempt < MAX_RETRIES) {
         const delay = Math.pow(2, attempt - 1) * 1000 // Exponential backoff

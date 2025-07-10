@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import { createClient, isSupabaseConnected } from "@/lib/supabase"
+import { createClient, isSupabaseConnected, testSupabaseConnection } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
 import { AppError, ErrorType, ErrorSeverity, handleError, withErrorHandling } from "@/lib/error-handler"
 
@@ -13,6 +13,7 @@ export function useAuthLogic() {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
+  const [session, setSession] = useState<any | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'offline'>('connecting')
   
   // Use singleton client
@@ -163,6 +164,7 @@ export function useAuthLogic() {
 
   // Session and auth state initialization with improved timeout handling
   useEffect(() => {
+    console.log("useAuthLogic: Auth useEffect triggered.")
     let isMounted = true
     let timeoutId: NodeJS.Timeout
 
@@ -181,39 +183,23 @@ export function useAuthLogic() {
       }, TIMEOUT_MS)
 
       try {
-        // Test connection first
-        const isConnected = await isSupabaseConnected()
-        if (!isConnected && isMounted) {
-          console.warn("⚠️ Supabase connection failed – continuing offline")
-          setConnectionStatus('offline')
-          setLoading(false)
-          return
-        }
-
-        if (isMounted) {
+        console.log("useAuthLogic: Calling testSupabaseConnection...");
+        const { success, error, retries } = await testSupabaseConnection()
+        console.log(`useAuthLogic: testSupabaseConnection returned - success: ${success}, error: ${error}, retries: ${retries}`);
+        if (success) {
+          const { data: { session } } = await supabase.auth.getSession()
+          setSession(session)
           setConnectionStatus('connected')
-        }
-
-        const { data: { session }, error } = await supabase.auth.getSession()
-        
-        if (error) {
-          console.warn("⚠️ Session retrieval error:", error)
-          if (isMounted) {
-            setConnectionStatus('offline')
-            setLoading(false)
+          console.log("useAuthLogic: Supabase connection successful, status set to 'connected'.")
+          if (session?.user) {
+            await getProfile(session.user.id)
           }
-          return
+        } else {
+          throw new Error(`Supabase connection failed after retries. Error: ${error}`)
         }
-
-        if (session?.user && isMounted) {
-          setUser(session.user)
-          await getProfile(session.user.id)
-        }
-      } catch (err) {
-        if (isMounted) {
-          console.warn("⚠️ Session initialization failed:", err)
-          setConnectionStatus('offline')
-        }
+      } catch (error) {
+        console.error("useAuthLogic: Caught final error in checkSession.", error);
+        setConnectionStatus('offline')
       } finally {
         clearTimeout(timeoutId)
         if (isMounted) {
