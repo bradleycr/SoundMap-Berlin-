@@ -6,9 +6,9 @@ import { createClient } from "@/lib/supabase"
 import { useAuth } from "@/app/providers"
 import { Button } from "@/components/ui/button"
 import { AudioPlayer } from "@/components/audio-player"
-import { BerlinMap } from "@/components/berlin-map"
+import { FocusedWalkMap } from "@/components/focused-walk-map"
 import { OfflineStorage } from "@/lib/storage"
-import { Heart, X, SkipForward, ArrowLeft, Map, Wifi, WifiOff, User } from "lucide-react"
+import { Heart, X, SkipForward, ArrowLeft, Wifi, WifiOff, User, Map, Navigation } from "lucide-react"
 import { getCurrentLocation, watchLocation } from "@/lib/geolocation"
 
 export const dynamic = 'force-dynamic'
@@ -30,7 +30,7 @@ export default function WalkPage() {
   const {
     user,
     profile,
-    loading: authLoading, // Rename to avoid conflict
+    loading: authLoading,
     signInAnonymously,
   } = useAuth()
   const router = useRouter()
@@ -47,8 +47,10 @@ export default function WalkPage() {
   const [userLikes, setUserLikes] = useState<string[]>([])
   const [userDislikes, setUserDislikes] = useState<string[]>([])
   const [showMap, setShowMap] = useState(true)
-  const [isLoading, setIsLoading] = useState(true) // For local data loading
-  const [isOnline, setIsOnline] = useState(true) // Default to true, will be updated in useEffect
+  const [showCompass, setShowCompass] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isOnline, setIsOnline] = useState(true)
+  const [walkingMode, setWalkingMode] = useState<'focus' | 'explore'>('focus') // New walking mode toggle
   const watchIdRef = useRef<number | null>(null)
 
   // Initialize client-side only services
@@ -59,7 +61,6 @@ export default function WalkPage() {
         setStorage(OfflineStorage.getInstance())
       } catch (error) {
         console.error("Failed to initialize services:", error)
-        // Continue without Supabase if environment is not configured
         setStorage(OfflineStorage.getInstance())
       }
     }
@@ -90,7 +91,7 @@ export default function WalkPage() {
 
   // Initialize location and preferences
   useEffect(() => {
-    if (!storage) return // Wait for storage to be initialized
+    if (!storage) return
     
     const initialize = async () => {
       setIsLoading(true)
@@ -123,7 +124,6 @@ export default function WalkPage() {
           clipsTimeout
         ]).catch((error) => {
           console.warn("Failed to load clips:", error)
-          // Load from offline storage as fallback
           const offlineClips = storage?.getClips()
           setAllClips(offlineClips || [])
         })
@@ -136,7 +136,7 @@ export default function WalkPage() {
     }
 
     initialize()
-  }, [storage]) // Remove user dependency to prevent loops
+  }, [storage])
 
   // Initialize user in background if needed
   useEffect(() => {
@@ -145,7 +145,7 @@ export default function WalkPage() {
     }
   }, [user, authLoading, signInAnonymously])
 
-  // Start location watching after initial load
+  // Start location watching after initial load with higher frequency for walking
   useEffect(() => {
     if (!currentPosition || isLoading) return
 
@@ -157,6 +157,11 @@ export default function WalkPage() {
       (error) => {
         console.warn("Location watch error:", error)
       },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 5000, // More frequent updates for walking
+        timeout: 10000
+      }
     )
 
     if (watchId) {
@@ -168,27 +173,26 @@ export default function WalkPage() {
         navigator.geolocation.clearWatch(watchIdRef.current)
       }
     }
-  }, [isLoading]) // Dependency only on isLoading to start the watch once
+  }, [isLoading])
 
   const loadClips = async (lat: number, lng: number) => {
     try {
       if (isOnline && supabase) {
-        // Only load all clips once, then just update nearby
         const promises = []
         
         if (allClips.length === 0) {
           promises.push(
-            supabase.from("clips").select("*").order("created_at", { ascending: false }).limit(100)
+            supabase.from("clips").select("*").order("created_at", { ascending: false }).limit(200)
           )
         }
         
+        // Get nearby clips with smaller radius for focused walking experience
         promises.push(
-          supabase.rpc("get_nearby", { lat, lng, max_dist: 200 })
+          supabase.rpc("get_nearby", { lat, lng, max_dist: 100 }) // Reduced from 200m to 100m
         )
 
         const results = await Promise.allSettled(promises)
         
-        // Update all clips if we fetched them
         if (allClips.length === 0 && results[0] && results[0].status === "fulfilled") {
           const clipsData = results[0].value.data
           if (clipsData) {
@@ -199,69 +203,40 @@ export default function WalkPage() {
           }
         }
 
-        // Update nearby clips
         const nearbyIndex = allClips.length === 0 ? 1 : 0
         if (results[nearbyIndex] && results[nearbyIndex].status === "fulfilled") {
           const nearbyData = results[nearbyIndex].value.data
           if (nearbyData) {
-            const filteredClips = nearbyData.filter((clip: Clip) => !userDislikes.includes(clip.id))
-            const rankedClips = rankClipsByLikesAndRecency(filteredClips)
-            setNearbyClips(rankedClips)
-
-            if (rankedClips.length > 0 && !isPlaying && currentClipIndex === 0) {
-              setIsPlaying(true)
-            }
+            const filteredNearby = nearbyData.filter((clip: Clip) => !userDislikes.includes(clip.id))
+            const rankedNearby = rankClipsByLikesAndRecency(filteredNearby)
+            setNearbyClips(rankedNearby)
           }
         }
-      } else {
-        // Load from offline storage
-        if (storage) {
-          const offlineClips = storage.getClips()
-          if (allClips.length === 0) {
-            setAllClips(offlineClips)
-          }
-
-          // Calculate nearby clips offline
-          const nearby = offlineClips.filter((clip: Clip) => {
-            const distance = calculateDistance(lat, lng, clip.lat, clip.lng)
-            return distance <= 200 && !userDislikes.includes(clip.id)
-          })
-          const rankedClips = rankClipsByLikesAndRecency(nearby)
-          setNearbyClips(rankedClips)
-        }
+      } else if (storage) {
+        const offlineClips = storage.getClips()
+        const nearbyOffline = offlineClips.filter((clip: Clip) => {
+          const distance = calculateDistance(lat, lng, clip.lat, clip.lng)
+          return distance <= 100 && !userDislikes.includes(clip.id)
+        })
+        setNearbyClips(rankClipsByLikesAndRecency(nearbyOffline))
       }
     } catch (error) {
       console.error("Error loading clips:", error)
-      // Fallback to offline storage
-      if (storage) {
-        const offlineClips = storage.getClips()
-        if (allClips.length === 0) {
-          setAllClips(offlineClips)
-        }
-      }
     }
   }
 
-  /**
-   * Smart ranking algorithm: Likes weighted more heavily than recency
-   * Likes get 10x weight, recency gets diminishing returns over time
-   */
   const rankClipsByLikesAndRecency = (clipsToRank: Clip[]) => {
     return [...clipsToRank].sort((a, b) => {
-      // Like score (heavily weighted)
+      // Prioritize liked clips higher
       const likeScoreA = a.like_count * 10
       const likeScoreB = b.like_count * 10
 
-      // Recency score (newer = higher score, max 100 points)
+      // Recency score (newer = higher score, max 30 days consideration)
       const now = Date.now()
-      const ageA = now - new Date(a.created_at).getTime()
-      const ageB = now - new Date(b.created_at).getTime()
-      const daysOldA = ageA / (1000 * 60 * 60 * 24)
-      const daysOldB = ageB / (1000 * 60 * 60 * 24)
-
-      // Exponential decay for recency (newer clips get higher scores)
-      const recencyScoreA = Math.max(0, 100 * Math.exp(-daysOldA / 30)) // 30-day half-life
-      const recencyScoreB = Math.max(0, 100 * Math.exp(-daysOldB / 30))
+      const ageA = Math.min(30, (now - new Date(a.created_at).getTime()) / (1000 * 60 * 60 * 24))
+      const ageB = Math.min(30, (now - new Date(b.created_at).getTime()) / (1000 * 60 * 60 * 24))
+      const recencyScoreA = Math.max(0, 30 - ageA)
+      const recencyScoreB = Math.max(0, 30 - ageB)
 
       const totalScoreA = likeScoreA + recencyScoreA
       const totalScoreB = likeScoreB + recencyScoreB
@@ -280,7 +255,7 @@ export default function WalkPage() {
     const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2)
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 
-    return R * c
+    return Math.round(R * c)
   }
 
   const handleLike = async (clipId: string) => {
@@ -292,7 +267,6 @@ export default function WalkPage() {
       storage.storePreferences(newLikes, userDislikes)
     }
 
-    // Re-rank clips after liking (this clip will move up in future encounters)
     if (currentPosition) {
       await loadClips(currentPosition.lat, currentPosition.lng)
     }
@@ -345,6 +319,14 @@ export default function WalkPage() {
     }
   }
 
+  const handleClipClick = (clip: Clip) => {
+    const clipIndex = nearbyClips.findIndex(c => c.id === clip.id)
+    if (clipIndex >= 0) {
+      setCurrentClipIndex(clipIndex)
+      setIsPlaying(true)
+    }
+  }
+
   const currentClip = nearbyClips[currentClipIndex]
 
   if (isLoading || (authLoading && !currentPosition)) {
@@ -353,8 +335,24 @@ export default function WalkPage() {
         <div className="text-center">
           <div className="text-2xl mb-4 animate-pulse font-pixel text-sage-400">LOCATING...</div>
           <div className="text-sm font-pixel text-mint-400">
-            {authLoading ? "CHECKING SESSION..." : "GETTING LOCATION..."}
+            {authLoading ? "CHECKING SESSION..." : "GETTING PRECISE LOCATION..."}
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!currentPosition) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-stone-900 to-stone-800 p-4 flex items-center justify-center safe-area-top safe-area-bottom">
+        <div className="text-center space-y-4">
+          <div className="text-xl font-pixel text-coral-400">LOCATION REQUIRED</div>
+          <div className="text-sm font-pixel text-stone-400">
+            WALKING MODE NEEDS YOUR LOCATION TO DISCOVER NEARBY CLIPS
+          </div>
+          <Button onClick={() => router.push("/map")} className="pixel-button-mint">
+            EXPLORE MAP INSTEAD
+          </Button>
         </div>
       </div>
     )
@@ -362,122 +360,132 @@ export default function WalkPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-stone-900 to-stone-800 p-4 safe-area-top safe-area-bottom">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      {/* Simplified Header for Walking */}
+      <div className="flex items-center justify-between mb-4">
         <Button onClick={() => router.push("/")} className="pixel-button-sand">
           <ArrowLeft className="w-4 h-4 mr-2" />
           EXIT
         </Button>
         <div className="text-center">
-          <div className="text-lg font-pixel text-sage-400">WALKING MODE</div>
+          <div className="text-lg font-pixel text-coral-400">WALKING MODE</div>
           <div className="text-xs text-mint-400 font-pixel flex items-center justify-center gap-2">
             {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-            {currentPosition ? `${currentPosition.lat.toFixed(4)}, ${currentPosition.lng.toFixed(4)}` : "LOCATING..."}
+            LIVE TRACKING
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setShowMap(!showMap)} className="pixel-button-mint">
-            <Map className="w-4 h-4" />
+        <div className="flex gap-1">
+          <Button 
+            onClick={() => setShowCompass(!showCompass)} 
+            className={`pixel-button-mint text-xs p-2 ${showCompass ? 'bg-mint-400 text-stone-900' : ''}`}
+          >
+            <Navigation className="w-3 h-3" />
           </Button>
-          <Button onClick={() => router.push("/profile")} className="pixel-button-sand">
-            <User className="w-4 h-4" />
+          <Button onClick={() => setShowMap(!showMap)} className="pixel-button-sage text-xs p-2">
+            <Map className="w-3 h-3" />
+          </Button>
+          <Button onClick={() => router.push("/profile")} className="pixel-button-sand text-xs p-2">
+            <User className="w-3 h-3" />
           </Button>
         </div>
       </div>
 
-      {/* Enhanced Map View */}
-      {showMap && currentPosition && (
-        <div className="mb-6">
-          <BerlinMap
+      {/* Focused Walk Map */}
+      {showMap && (
+        <div className="mb-6 flex justify-center">
+          <FocusedWalkMap
             clips={allClips}
             currentPosition={currentPosition}
+            nearbyClips={nearbyClips}
             currentlyPlaying={currentClip?.id}
-            onClipClick={(clip) => {
-              const nearbyIndex = nearbyClips.findIndex((c) => c.id === clip.id)
-              if (nearbyIndex >= 0) {
-                setCurrentClipIndex(nearbyIndex)
-                setIsPlaying(true)
-              }
-            }}
+            onClipClick={handleClipClick}
+            showCompass={showCompass}
           />
         </div>
       )}
 
-      {/* Audio Player Section */}
-      <div className="max-w-md mx-auto space-y-6">
+      {/* Audio Player Section - Simplified for Walking */}
+      <div className="max-w-sm mx-auto space-y-4">
         {currentClip ? (
           <>
-            <div className="retro-border p-6 text-center space-y-4">
-              <div className="text-xl font-pixel text-coral-400 mb-2">NOW PLAYING</div>
-              <div className="text-sm font-pixel text-sand-400">{currentClip.title}</div>
+            {/* Now Playing Card */}
+            <div className="retro-border p-4 text-center space-y-3 bg-stone-800/50">
+              <div className="text-lg font-pixel text-coral-400">NOW PLAYING</div>
+              <div className="text-sm font-pixel text-sand-400 line-clamp-2">{currentClip.title}</div>
               <div className="text-xs text-gray-400 font-pixel">
                 {currentClipIndex + 1} OF {nearbyClips.length} NEARBY
                 {nearbyClips.length > 1 && (
-                  <div className="mt-1">RANKED BY LIKES ({currentClip.like_count}♥) + RECENCY</div>
+                  <div className="mt-1">♥ {currentClip.like_count} • {new Date(currentClip.created_at).toLocaleDateString()}</div>
                 )}
               </div>
             </div>
 
-            <AudioPlayer src={currentClip.url} isPlaying={isPlaying} onPlayPause={setIsPlaying} onEnded={handleSkip} />
+            {/* Audio Player */}
+            <AudioPlayer 
+              src={currentClip.url} 
+              isPlaying={isPlaying} 
+              onPlayPause={setIsPlaying} 
+              onEnded={handleSkip} 
+            />
 
-            {/* Controls */}
-            <div className="flex justify-center gap-4">
+            {/* Walking Controls - Large buttons for mobile */}
+            <div className="grid grid-cols-3 gap-3">
               <Button
                 onClick={() => handleLike(currentClip.id)}
                 disabled={userLikes.includes(currentClip.id)}
-                className="pixel-button-mint scanline-hover"
+                className="pixel-button-mint h-12 flex-col"
               >
-                <Heart className="w-4 h-4 mr-2" />
-                LIKE
+                <Heart className="w-4 h-4 mb-1" />
+                <span className="text-xs">LIKE</span>
               </Button>
 
-              <Button onClick={handleSkip} disabled={nearbyClips.length <= 1} className="pixel-button scanline-hover">
-                <SkipForward className="w-4 h-4 mr-2" />
-                SKIP
+              <Button 
+                onClick={handleSkip} 
+                disabled={nearbyClips.length <= 1} 
+                className="pixel-button h-12 flex-col"
+              >
+                <SkipForward className="w-4 h-4 mb-1" />
+                <span className="text-xs">SKIP</span>
               </Button>
 
-              <Button onClick={() => handleDislike(currentClip.id)} className="pixel-button-coral scanline-hover">
-                <X className="w-4 h-4 mr-2" />
-                HIDE
+              <Button 
+                onClick={() => handleDislike(currentClip.id)} 
+                className="pixel-button-coral h-12 flex-col"
+              >
+                <X className="w-4 h-4 mb-1" />
+                <span className="text-xs">HIDE</span>
               </Button>
             </div>
 
-            {/* Enhanced Stats */}
-            <div className="text-center text-xs font-pixel text-gray-400 space-y-1">
-              <div>
-                LIKES: {currentClip.like_count} • RADIUS: {currentClip.radius}M
-              </div>
-              <div>CREATED: {new Date(currentClip.created_at).toLocaleDateString()}</div>
-              {nearbyClips.length > 1 && (
+            {/* Queue Preview */}
+            {nearbyClips.length > 1 && (
+              <div className="text-center text-xs font-pixel text-gray-400 space-y-1">
                 <div className="text-mint-400">
-                  QUEUE:{" "}
-                  {nearbyClips
-                    .slice(1, 4)
-                    .map((c) => `${c.title} (${c.like_count}♥)`)
-                    .join(", ")}
-                  {nearbyClips.length > 4 && ` +${nearbyClips.length - 4} more`}
+                  NEXT: {nearbyClips.slice(1, 3).map((c) => c.title.substring(0, 20) + (c.title.length > 20 ? '...' : '')).join(', ')}
+                  {nearbyClips.length > 3 && ` +${nearbyClips.length - 3} more`}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="text-center space-y-4">
-            <div className="retro-border p-6">
+            <div className="retro-border p-6 bg-stone-800/30">
               <div className="text-lg font-pixel text-sage-400 mb-2">NO SOUNDS NEARBY</div>
-              <div className="text-xs font-pixel text-gray-400">KEEP WALKING TO DISCOVER CLIPS</div>
-              <div className="text-xs font-pixel text-stone-500 mt-2">TOTAL CLIPS IN BERLIN: {allClips.length}</div>
+              <div className="text-sm font-pixel text-gray-400 mb-3">KEEP WALKING TO DISCOVER CLIPS</div>
+              <div className="text-xs font-pixel text-stone-500">
+                SEARCH RADIUS: 100M • TOTAL CLIPS: {allClips.length}
+              </div>
             </div>
 
-            <Button onClick={() => router.push("/record")} className="pixel-button-coral w-full">
+            <Button onClick={() => router.push("/record")} className="pixel-button-coral w-full h-12">
               BE THE FIRST TO RECORD HERE
             </Button>
           </div>
         )}
       </div>
 
-      {/* Debug Info */}
-      <div className="fixed bottom-4 left-4 text-xs font-pixel text-gray-600">
-        NEARBY: {nearbyClips.length} • TOTAL: {allClips.length} • {isOnline ? "ONLINE" : "OFFLINE"}
+      {/* Walking Stats Footer */}
+      <div className="fixed bottom-4 left-4 right-4 text-center text-xs font-pixel text-gray-600 bg-stone-900/60 p-2 rounded">
+        NEARBY: {nearbyClips.length} • RANGE: 100M • {isOnline ? "LIVE" : "OFFLINE"}
       </div>
     </div>
   )

@@ -171,21 +171,23 @@ export function reportError(
     console.error('🚨 Error Report:', errorInfo);
   }
   
-  // Send to Sentry with enhanced context
-  Sentry.withScope((scope) => {
-    scope.setLevel(severity === ErrorSeverity.CRITICAL ? 'fatal' : 
-                   severity === ErrorSeverity.HIGH ? 'error' : 
-                   severity === ErrorSeverity.MEDIUM ? 'warning' : 'info');
-    
-    scope.setTag('error_type', errorInfo.type);
-    scope.setContext('error_details', errorInfo.context);
-    
-    if (context?.userId) {
-      scope.setUser({ id: context.userId });
-    }
-    
-    Sentry.captureException(error);
-  });
+  // Send to Sentry with enhanced context (only in production)
+  if (process.env.NODE_ENV === 'production') {
+    Sentry.withScope((scope) => {
+      scope.setLevel(severity === ErrorSeverity.CRITICAL ? 'fatal' : 
+                     severity === ErrorSeverity.HIGH ? 'error' : 
+                     severity === ErrorSeverity.MEDIUM ? 'warning' : 'info');
+      
+      scope.setTag('error_type', errorInfo.type);
+      scope.setContext('error_details', errorInfo.context);
+      
+      if (context?.userId) {
+        scope.setUser({ id: context.userId });
+      }
+      
+      Sentry.captureException(error);
+    });
+  }
 }
 
 /**

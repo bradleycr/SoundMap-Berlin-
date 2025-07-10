@@ -5,9 +5,6 @@ import withPWA from 'next-pwa'
 const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['@supabase/supabase-js'],
-    // Opt-out of automatic vendor-chunk extraction that broke the build
-    optimizePackageImports: [],
-    // instrumentationHook completely disabled - causing register function errors
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -26,7 +23,7 @@ const config = withPWA({
   register: true,
   skipWaiting: true,
   cleanupOutdatedCaches: true, // Clean up old caches on deploy
-  disable: false, // Re-enable PWA
+  disable: process.env.NODE_ENV === 'development', // Disable PWA in development
   buildExcludes: [/app-build-manifest\.json$/], // Ignore problematic manifest
   runtimeCaching: [
     {

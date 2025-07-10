@@ -59,7 +59,7 @@ function createTimeoutPromise(ms: number): Promise<never> {
 async function testConnection(client: ReturnType<typeof createBrowserClient>): Promise<boolean> {
   try {
     console.log("testConnection: Performing query to test connection.");
-    const connectionTest = client.from("clips").select("count").limit(1)
+    const connectionTest = client.from("clips").select("id").limit(1)
     const timeoutPromise = createTimeoutPromise(CONNECTION_TIMEOUT)
     
     await Promise.race([connectionTest, timeoutPromise])
