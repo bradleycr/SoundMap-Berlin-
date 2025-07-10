@@ -14,24 +14,19 @@ const MAX_RETRIES = 3
  * Development: Uses localhost:3000
  */
 export function getSiteUrl(): string {
-  // For server-side, check environment variables first
+  // Use NEXT_PUBLIC_SITE_URL if available
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
   if (siteUrl) {
     return siteUrl.startsWith("http") ? siteUrl : `https://${siteUrl}`
   }
 
-  // For client-side, fallback to window.location.origin if available
-  if (typeof window !== "undefined") {
-    return window.location.origin
-  }
-
-  // Vercel-specific environment variable
+  // Fallback to Vercel URL if available
   const vercelUrl = process.env.NEXT_PUBLIC_VERCEL_URL
   if (vercelUrl) {
     return `https://${vercelUrl}`
   }
 
-  // Fallback to localhost for local development
+  // Default to localhost for local development
   return "http://localhost:3000"
 }
 
