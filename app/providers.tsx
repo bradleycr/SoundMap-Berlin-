@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null
   profile: any | null
   loading: boolean
+  connectionStatus: 'connecting' | 'connected' | 'offline'
   signInAnonymously: () => Promise<void>
   signOut: () => Promise<void>
   createProfile: (userData?: any) => Promise<void>

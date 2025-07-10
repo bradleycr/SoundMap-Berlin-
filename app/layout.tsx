@@ -5,6 +5,7 @@ import "./globals.css"
 import { AuthProviderWrapper } from "./auth-provider-wrapper"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { ToastProvider } from "@/components/toast-provider"
+import { ConnectionStatus } from "@/components/connection-status"
 
 const pressStart2P = Press_Start_2P({
   weight: "400",
@@ -98,7 +99,10 @@ export default function RootLayout({
       <body className="bg-stone-900 text-sage-400 font-pixel antialiased safe-area-top safe-area-bottom">
         <ErrorBoundary>
           <ToastProvider>
-            <AuthProviderWrapper>{children}</AuthProviderWrapper>
+            <AuthProviderWrapper>
+              <ConnectionStatus />
+              {children}
+            </AuthProviderWrapper>
           </ToastProvider>
         </ErrorBoundary>
       </body>

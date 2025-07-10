@@ -3,6 +3,7 @@
 import React from "react"
 import { Button } from "@/components/ui/button"
 import { AlertTriangle, RefreshCw } from "lucide-react"
+import { reportError, ErrorSeverity, getUserFriendlyMessage } from "@/lib/error-handler"
 
 interface ErrorBoundaryState {
   hasError: boolean
@@ -13,12 +14,13 @@ interface ErrorBoundaryState {
 interface ErrorBoundaryProps {
   children: React.ReactNode
   fallback?: React.ComponentType<{ error: Error; retry: () => void }>
+  componentName?: string
 }
 
 /**
- * Global Error Boundary Component
+ * Enhanced Global Error Boundary Component
  * Catches JavaScript errors anywhere in the child component tree
- * Provides fallback UI and error reporting capabilities
+ * Provides fallback UI and comprehensive error reporting capabilities
  */
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
@@ -32,16 +34,22 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log error to console and potentially to error reporting service
-    console.error("ErrorBoundary caught an error:", error, errorInfo)
+    // Enhanced error reporting with context
+    const context = {
+      component: this.props.componentName || 'ErrorBoundary',
+      errorInfo: errorInfo.componentStack,
+      url: typeof window !== 'undefined' ? window.location.href : 'unknown',
+      userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'unknown',
+      timestamp: new Date().toISOString(),
+    }
+
+    // Report error with high severity since it crashed a component
+    reportError(error, context, ErrorSeverity.HIGH)
 
     this.setState({
       error,
       errorInfo,
     })
-
-    // TODO: Send error to monitoring service (Sentry, LogRocket, etc.)
-    // this.reportError(error, errorInfo)
   }
 
   private handleRetry = () => {
@@ -56,7 +64,9 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
         return <FallbackComponent error={this.state.error!} retry={this.handleRetry} />
       }
 
-      // Default fallback UI with retro styling
+      // Enhanced fallback UI with user-friendly messaging
+      const userMessage = this.state.error ? getUserFriendlyMessage(this.state.error) : "Something went wrong";
+      
       return (
         <div className="min-h-screen bg-gradient-to-b from-stone-900 to-stone-800 p-4 flex items-center justify-center">
           <div className="max-w-md mx-auto text-center space-y-6">
@@ -64,12 +74,19 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               <AlertTriangle className="w-12 h-12 text-coral-400 mx-auto" />
               <div className="text-xl font-pixel text-coral-400">SYSTEM ERROR</div>
               <div className="text-sm font-pixel text-stone-400">
-                Something went wrong. The app encountered an unexpected error.
+                {userMessage}
               </div>
 
               {process.env.NODE_ENV === "development" && this.state.error && (
                 <div className="text-xs font-mono text-stone-500 bg-stone-800 p-3 rounded border-l-2 border-coral-400 text-left">
-                  {this.state.error.message}
+                  <div className="font-bold text-coral-400 mb-1">Technical Details:</div>
+                  <div>{this.state.error.message}</div>
+                  {this.state.errorInfo && (
+                    <div className="mt-2 text-xs">
+                      <div className="font-bold text-coral-400">Component Stack:</div>
+                      <pre className="whitespace-pre-wrap text-xs">{this.state.errorInfo.componentStack}</pre>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -97,8 +114,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
  * Hook for handling async errors in functional components
  */
 export function useErrorHandler() {
-  return (error: Error, errorInfo?: string) => {
-    console.error("Async error:", error, errorInfo)
-    // TODO: Report to error monitoring service
+  return (error: Error, context?: Record<string, any>) => {
+    reportError(error, context, ErrorSeverity.MEDIUM)
   }
 }

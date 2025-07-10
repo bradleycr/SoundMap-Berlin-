@@ -1,51 +1,84 @@
 import { useState, useEffect, useCallback } from "react"
-import { createClient } from "@/lib/supabase"
+import { createClient, isSupabaseConnected } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
+import { AppError, ErrorType, ErrorSeverity, handleError, withErrorHandling } from "@/lib/error-handler"
 
 /**
  * useAuthLogic
  * Encapsulates all authentication and profile logic for SoundMap.
  * Exceptionally modular, beautiful, and robust. Designed for cross-platform and elegant mobile UX.
+ * Enhanced with comprehensive error handling and singleton client management.
  */
 export function useAuthLogic() {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'offline'>('connecting')
+  
+  // Use singleton client
   const supabase = createClient()
 
-  // Sign in anonymously
-  const signInAnonymously = useCallback(async () => {
-    try {
-      const { data, error } = await supabase.auth.signInAnonymously()
-      if (error) throw error
-      if (data.user) {
-        setUser(data.user)
-        await createProfile({
-          id: data.user.id,
-          name: "Anonymous User",
-          anonymous: true,
-        })
-      }
-    } catch (error) {
-      console.error("Anonymous sign in error:", error)
+  // Sign in anonymously with enhanced error handling
+  const signInAnonymously = useCallback(withErrorHandling(async () => {
+    const { data, error } = await supabase.auth.signInAnonymously()
+    if (error) {
+      throw new AppError(
+        "Failed to sign in anonymously",
+        ErrorType.AUTHENTICATION,
+        ErrorSeverity.MEDIUM,
+        {
+          context: { supabaseError: error },
+          userMessage: "Unable to create anonymous session. Please try again.",
+          retryable: true,
+          cause: error
+        }
+      )
     }
-  }, [supabase])
-
-  // Sign out
-  const signOut = useCallback(async () => {
-    try {
-      await supabase.auth.signOut()
-      setUser(null)
-      setProfile(null)
-    } catch (error) {
-      console.error("Sign out error:", error)
+    if (data.user) {
+      setUser(data.user)
+      await createProfile({
+        id: data.user.id,
+        name: "Anonymous User",
+        anonymous: true,
+      })
     }
-  }, [supabase])
+  }, { operation: 'signInAnonymously' }), [supabase])
 
-  // Create or update profile
-  const createProfile = useCallback(async (userData?: any) => {
+  // Sign out with enhanced error handling
+  const signOut = useCallback(withErrorHandling(async () => {
+    const { error } = await supabase.auth.signOut()
+    if (error) {
+      throw new AppError(
+        "Failed to sign out",
+        ErrorType.AUTHENTICATION,
+        ErrorSeverity.MEDIUM,
+        {
+          context: { supabaseError: error },
+          userMessage: "Sign out failed. Please try again.",
+          retryable: true,
+          cause: error
+        }
+      )
+    }
+    setUser(null)
+    setProfile(null)
+  }, { operation: 'signOut' }), [supabase])
+
+  // Create or update profile with enhanced error handling
+  const createProfile = useCallback(withErrorHandling(async (userData?: any) => {
     const currentUser = userData || user
-    if (!currentUser) return
+    if (!currentUser) {
+      throw new AppError(
+        "No user data available for profile creation",
+        ErrorType.VALIDATION,
+        ErrorSeverity.MEDIUM,
+        {
+          context: { userData, user },
+          userMessage: "Unable to create profile. Please sign in first.",
+          retryable: false
+        }
+      )
+    }
 
     const profileData = {
       id: currentUser.id,
@@ -62,74 +95,143 @@ export function useAuthLogic() {
       anonymous: userData?.anonymous || !currentUser.email,
     }
 
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .upsert(profileData, { onConflict: "id" })
-        .select()
-        .single()
-      if (error) throw error
-      setProfile(data)
-    } catch (error) {
-      console.error("Profile creation/update error:", error)
+    const { data, error } = await supabase
+      .from("profiles")
+      .upsert(profileData, { onConflict: "id" })
+      .select()
+      .single()
+    
+    if (error) {
+      throw new AppError(
+        "Failed to create or update profile",
+        ErrorType.AUTHENTICATION,
+        ErrorSeverity.HIGH,
+        {
+          context: { supabaseError: error, profileData },
+          userMessage: "Profile update failed. Please try again.",
+          retryable: true,
+          cause: error
+        }
+      )
     }
-  }, [supabase, user])
+    
+    setProfile(data)
+  }, { operation: 'createProfile' }), [supabase, user])
 
-  // Fetch profile by user ID
-  const getProfile = useCallback(async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single()
-      if (error && error.code !== "PGRST116") throw error // Ignore no rows found
-      if (data) setProfile(data)
-    } catch (error) {
-      console.error("Profile fetch error:", error)
+  // Fetch profile by user ID with enhanced error handling
+  const getProfile = useCallback(withErrorHandling(async (userId: string) => {
+    if (!userId) {
+      throw new AppError(
+        "User ID is required to fetch profile",
+        ErrorType.VALIDATION,
+        ErrorSeverity.MEDIUM,
+        {
+          context: { userId },
+          userMessage: "Unable to load profile. Please sign in again.",
+          retryable: false
+        }
+      )
     }
-  }, [supabase])
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single()
+    
+    if (error && error.code !== "PGRST116") { // Ignore no rows found
+      throw new AppError(
+        "Failed to fetch profile",
+        ErrorType.AUTHENTICATION,
+        ErrorSeverity.MEDIUM,
+        {
+          context: { supabaseError: error, userId },
+          userMessage: "Unable to load profile. Please try again.",
+          retryable: true,
+          cause: error
+        }
+      )
+    }
+    
+    if (data) setProfile(data)
+  }, { operation: 'getProfile' }), [supabase])
 
   // Debug helper
   const debugAuthState = useCallback(() => {
-    console.log("Auth Debug:", { user, profile, loading })
-  }, [user, profile, loading])
+    console.log("Auth Debug:", { user, profile, loading, connectionStatus })
+  }, [user, profile, loading, connectionStatus])
 
-  // Session and auth state initialization
+  // Session and auth state initialization with improved timeout handling
   useEffect(() => {
     let isMounted = true
+    let timeoutId: NodeJS.Timeout
+
     const initializeSession = async () => {
-      // Fallback timeout so UI never hangs >5s
-      const TIMEOUT_MS = 5000
-      const timeoutId = setTimeout(() => {
+      console.log("🔄 Initializing auth session...")
+      setConnectionStatus('connecting')
+      
+      // Reduced timeout for better UX
+      const TIMEOUT_MS = 3000
+      timeoutId = setTimeout(() => {
         if (isMounted) {
-          console.warn("⚠️  Supabase session request timed-out – continuing offline")
+          console.warn("⚠️ Supabase session request timed out – continuing offline")
+          setConnectionStatus('offline')
           setLoading(false)
         }
       }, TIMEOUT_MS)
 
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        // Test connection first
+        const isConnected = await isSupabaseConnected()
+        if (!isConnected && isMounted) {
+          console.warn("⚠️ Supabase connection failed – continuing offline")
+          setConnectionStatus('offline')
+          setLoading(false)
+          return
+        }
+
+        if (isMounted) {
+          setConnectionStatus('connected')
+        }
+
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.warn("⚠️ Session retrieval error:", error)
+          if (isMounted) {
+            setConnectionStatus('offline')
+            setLoading(false)
+          }
+          return
+        }
+
         if (session?.user && isMounted) {
           setUser(session.user)
           await getProfile(session.user.id)
         }
       } catch (err) {
         if (isMounted) {
-          console.warn("⚠️  Session check failed:", err)
+          console.warn("⚠️ Session initialization failed:", err)
+          setConnectionStatus('offline')
         }
       } finally {
         clearTimeout(timeoutId)
-        if (isMounted) setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 
     initializeSession()
 
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!isMounted) return
+        
+        console.log("🔄 Auth state changed:", event)
         setUser(session?.user ?? null)
+        
         if (session?.user) {
           await getProfile(session.user.id)
           if (event === "SIGNED_IN") {
@@ -151,6 +253,7 @@ export function useAuthLogic() {
 
     return () => {
       isMounted = false
+      if (timeoutId) clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
   }, [supabase, getProfile, createProfile])
@@ -159,6 +262,7 @@ export function useAuthLogic() {
     user,
     profile,
     loading,
+    connectionStatus,
     signInAnonymously,
     signOut,
     createProfile,

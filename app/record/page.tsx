@@ -1,7 +1,7 @@
 "use client"
 
 import { useAuth } from "@/app/providers"
-import AudioRecorder from "@/components/audio-recorder"
+import { AudioRecorder } from "@/components/audio-recorder"
 import { LoginPrompt } from "@/components/auth/login-prompt"
 import { Loader2 } from "lucide-react"
 

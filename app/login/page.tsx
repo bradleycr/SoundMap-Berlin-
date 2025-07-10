@@ -7,6 +7,8 @@ import { useAuth } from "@/app/providers"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/toast-provider"
 import { ArrowLeft, Mail, Loader2, Send } from "lucide-react"
+import { validateEmail, throwValidationError } from "@/lib/form-validation"
+import { AppError, ErrorType, ErrorSeverity, handleError, withErrorHandling } from "@/lib/error-handler"
 
 export default function LoginPage() {
   const { loading: authLoading } = useAuth()
@@ -15,29 +17,64 @@ export default function LoginPage() {
   const { success, error: showError } = useToast()
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [emailError, setEmailError] = useState("")
 
-  const handleMagicLinkSignIn = async () => {
-    if (!email) {
-      showError("Email is required", "Please enter your email address to sign in.")
-      return
+  const handleMagicLinkSignIn = withErrorHandling(async () => {
+    // Validate email
+    const emailValidation = validateEmail(email)
+    if (!emailValidation.isValid) {
+      setEmailError(emailValidation.errors[0])
+      throw new AppError(
+        "Email validation failed",
+        ErrorType.VALIDATION,
+        ErrorSeverity.LOW,
+        {
+          context: { email, validationErrors: emailValidation.errors },
+          userMessage: emailValidation.errors[0],
+          retryable: false
+        }
+      )
     }
+
+    setEmailError("")
     setIsLoading(true)
+    
     try {
       const { error } = await supabase.auth.signInWithOtp({
-        email,
+        email: email.trim().toLowerCase(),
         options: {
           emailRedirectTo: getAuthCallbackUrl(),
         },
       })
-      if (error) throw error
+      
+      if (error) {
+        throw new AppError(
+          "Failed to send magic link",
+          ErrorType.AUTHENTICATION,
+          ErrorSeverity.MEDIUM,
+          {
+            context: { supabaseError: error, email },
+            userMessage: error.message || "Could not send magic link. Please try again.",
+            retryable: true,
+            cause: error
+          }
+        )
+      }
+      
       success("Check your inbox!", `A magic link has been sent to ${email}.`)
+      
       // Optional: redirect or clear form after success
       // router.push('/check-email-notice'); 
-    } catch (error: any) {
-      console.error("Magic link error:", error)
-      showError("Authentication Failed", error.message || "Could not send magic link. Please try again.")
     } finally {
       setIsLoading(false)
+    }
+  }, { operation: 'magicLinkSignIn' })
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value)
+    // Clear error when user starts typing
+    if (emailError) {
+      setEmailError("")
     }
   }
 
@@ -69,12 +106,19 @@ export default function LoginPage() {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-stone-800 border-sage-400 text-sage-400 font-pixel text-lg pl-10"
+                  onChange={(e) => handleEmailChange(e.target.value)}
+                  className={`bg-stone-800 text-sage-400 font-pixel text-lg pl-10 ${
+                    emailError ? 'border-coral-400' : 'border-sage-400'
+                  }`}
                   placeholder="your@email.com"
                   disabled={isLoading || authLoading}
                 />
               </div>
+              {emailError && (
+                <div className="text-xs font-pixel text-coral-400 mt-1">
+                  {emailError}
+                </div>
+              )}
             </div>
             
             <button

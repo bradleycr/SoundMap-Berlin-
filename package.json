@@ -37,6 +37,8 @@
     "@radix-ui/react-toggle": "latest",
     "@radix-ui/react-toggle-group": "latest",
     "@radix-ui/react-tooltip": "latest",
+    "@sentry/nextjs": "^9.36.0",
+    "@sentry/react": "^9.36.0",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "@types/uuid": "^10.0.0",

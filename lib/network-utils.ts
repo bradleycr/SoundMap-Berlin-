@@ -1,7 +1,9 @@
 /**
- * Network Utilities
- * Handles network requests with retry logic and offline support
+ * Enhanced Network Utilities
+ * Handles network requests with retry logic, offline support, and comprehensive error handling
  */
+
+import { AppError, ErrorType, ErrorSeverity, reportError } from "./error-handler"
 
 export interface RetryOptions {
   maxRetries?: number
@@ -9,10 +11,11 @@ export interface RetryOptions {
   maxDelay?: number
   backoffFactor?: number
   retryCondition?: (error: any) => boolean
+  context?: Record<string, any>
 }
 
 /**
- * Network request with exponential backoff retry
+ * Enhanced network request with exponential backoff retry and comprehensive error handling
  */
 export async function retryRequest<T>(requestFn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
   const {
@@ -20,13 +23,26 @@ export async function retryRequest<T>(requestFn: () => Promise<T>, options: Retr
     baseDelay = 1000,
     maxDelay = 10000,
     backoffFactor = 2,
+    context = {},
     retryCondition = (error) => {
-      // Retry on network errors, 5xx errors, and timeouts
+      // Enhanced retry conditions
+      const message = error?.message?.toLowerCase() || "";
+      const code = error?.code?.toLowerCase() || "";
+      const status = error?.status || 0;
+      
       return (
         error.name === "NetworkError" ||
         error.name === "TimeoutError" ||
-        (error.status >= 500 && error.status < 600) ||
-        error.code === "NETWORK_ERROR"
+        message.includes("network") ||
+        message.includes("timeout") ||
+        message.includes("fetch") ||
+        code.includes("network") ||
+        code.includes("timeout") ||
+        (status >= 500 && status < 600) ||
+        status === 408 || // Request Timeout
+        status === 429 || // Too Many Requests
+        status === 503 || // Service Unavailable
+        status === 504    // Gateway Timeout
       )
     },
   } = options
@@ -40,16 +56,40 @@ export async function retryRequest<T>(requestFn: () => Promise<T>, options: Retr
     } catch (error) {
       lastError = error
 
+      // Enhanced error context
+      const errorContext = {
+        ...context,
+        attempt: attempt + 1,
+        maxRetries: maxRetries + 1,
+        retryable: retryCondition(error),
+        delay: delay,
+      }
+
+      // Report error on first attempt or if not retryable
+      if (attempt === 0 || !retryCondition(error)) {
+        reportError(error, errorContext, ErrorSeverity.MEDIUM)
+      }
+
       // Don't retry if this is the last attempt or error is not retryable
       if (attempt === maxRetries || !retryCondition(error)) {
-        throw error
+        throw new AppError(
+          `Network request failed after ${attempt + 1} attempts`,
+          ErrorType.NETWORK,
+          ErrorSeverity.HIGH,
+          {
+            context: errorContext,
+            userMessage: "Connection problem. Please check your internet and try again.",
+            retryable: true,
+            cause: error
+          }
+        )
       }
 
       // Wait before retrying with exponential backoff
       await new Promise((resolve) => setTimeout(resolve, Math.min(delay, maxDelay)))
       delay *= backoffFactor
 
-      console.warn(`Request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms:`, error)
+      console.warn(`🔄 Request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms:`, error)
     }
   }
 
@@ -174,7 +214,7 @@ export class OfflineQueue {
   }
 
   /**
-   * Process all queued operations
+   * Process all queued operations with enhanced error handling
    */
   async processQueue() {
     if (this.isProcessing || (typeof window !== 'undefined' && !navigator?.onLine)) return
@@ -187,15 +227,25 @@ export class OfflineQueue {
       try {
         await item.operation()
         this.removeFromQueue(item.id)
-        console.log(`Offline operation completed: ${item.id}`)
+        console.log(`✅ Offline operation completed: ${item.id}`)
       } catch (error) {
         item.retries++
 
+        const errorContext = {
+          operationId: item.id,
+          retries: item.retries,
+          maxRetries: this.maxRetries,
+          timestamp: item.timestamp,
+          data: item.data
+        }
+
         if (item.retries >= this.maxRetries) {
-          console.error(`Offline operation failed permanently: ${item.id}`, error)
+          reportError(error, errorContext, ErrorSeverity.HIGH)
+          console.error(`❌ Offline operation failed permanently: ${item.id}`, error)
           this.removeFromQueue(item.id)
         } else {
-          console.warn(`Offline operation failed, will retry: ${item.id}`, error)
+          reportError(error, errorContext, ErrorSeverity.MEDIUM)
+          console.warn(`⚠️ Offline operation failed, will retry: ${item.id}`, error)
         }
       }
     }

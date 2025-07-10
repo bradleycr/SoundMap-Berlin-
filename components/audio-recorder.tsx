@@ -12,6 +12,7 @@ import { useAuth } from "@/app/providers"
 import { v4 as uuidv4 } from "uuid"
 import { toast } from "sonner"
 import { WaveformVisualizer } from "./waveform-visualizer"
+import { AppError, ErrorType, ErrorSeverity, handleError, withErrorHandling } from "@/lib/error-handler"
 
 const MAX_RECORDING_SECONDS = 60
 
@@ -23,8 +24,8 @@ const MAX_RECORDING_SECONDS = 60
  */
 export function AudioRecorder() {
   const router = useRouter()
-  const supabase = createClient()
-  const { user, signInAnonymously } = useAuth()
+  const supabase = createClient() // Using singleton client
+  const { user, signInAnonymously, connectionStatus } = useAuth()
 
   // ─── Local state ────────────────────────────────────────────────────────────
   const [isRecording, setIsRecording] = useState(false)
@@ -95,20 +96,45 @@ export function AudioRecorder() {
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop())
   }
 
-  // ─── Upload logic ──────────────────────────────────────────────────────────
-  const uploadRecording = async () => {
-    if (!recordedBlob) return
+  // ─── Upload logic with enhanced error handling ──────────────────────────────────────────────────────────
+  const uploadRecording = withErrorHandling(async () => {
+    if (!recordedBlob) {
+      throw new AppError(
+        "No recording available to upload",
+        ErrorType.VALIDATION,
+        ErrorSeverity.MEDIUM,
+        {
+          userMessage: "No recording found. Please record audio first.",
+          retryable: false
+        }
+      )
+    }
 
     // Ensure we have a user before uploading
     if (!user) {
       setShowAuthPrompt(true)
-      return
+      throw new AppError(
+        "User authentication required for upload",
+        ErrorType.AUTHENTICATION,
+        ErrorSeverity.MEDIUM,
+        {
+          userMessage: "Please sign in to upload clips.",
+          retryable: false
+        }
+      )
     }
 
     // Validate title is provided
     if (!title.trim()) {
-      toast.error("Please enter a title for your clip")
-      return
+      throw new AppError(
+        "Title is required for clip upload",
+        ErrorType.VALIDATION,
+        ErrorSeverity.LOW,
+        {
+          userMessage: "Please enter a title for your clip.",
+          retryable: false
+        }
+      )
     }
 
     setIsUploading(true)
@@ -119,9 +145,16 @@ export function AudioRecorder() {
       // Validate audio file
       const validation = await validateAudioFile(recordedBlob, { maxDurationSeconds: MAX_RECORDING_SECONDS })
       if (!validation.isValid) {
-        toast.error(validation.error || "Invalid audio file")
-        setIsUploading(false)
-        return
+        throw new AppError(
+          "Audio file validation failed",
+          ErrorType.AUDIO,
+          ErrorSeverity.MEDIUM,
+          {
+            context: { validation },
+            userMessage: validation.error || "Invalid audio file. Please try recording again.",
+            retryable: false
+          }
+        )
       }
 
       // Get location (fallback handled inside getCurrentLocation)
@@ -135,8 +168,17 @@ export function AudioRecorder() {
       const { data, error } = await supabase.storage.from("clips").upload(filename, recordedBlob)
 
       if (error) {
-        console.error("❌ Upload error:", error)
-        throw error
+        throw new AppError(
+          "Failed to upload audio file to storage",
+          ErrorType.STORAGE,
+          ErrorSeverity.HIGH,
+          {
+            context: { supabaseError: error, filename },
+            userMessage: "Upload failed. Please check your connection and try again.",
+            retryable: true,
+            cause: error
+          }
+        )
       }
 
       // Generate the public URL for the uploaded file
@@ -156,8 +198,17 @@ export function AudioRecorder() {
       const { error: dbError } = await supabase.from("clips").insert(clipData)
 
       if (dbError) {
-        console.error("❌ Database error:", dbError)
-        throw dbError
+        throw new AppError(
+          "Failed to save clip metadata to database",
+          ErrorType.STORAGE,
+          ErrorSeverity.HIGH,
+          {
+            context: { supabaseError: dbError, clipData },
+            userMessage: "Upload completed but failed to save clip details. Please try again.",
+            retryable: true,
+            cause: dbError
+          }
+        )
       }
 
       console.log("✅ Upload successful!")
@@ -165,23 +216,10 @@ export function AudioRecorder() {
       setTitle("")
       setRecordedBlob(null)
       setUploadSuccess(true)
-    } catch (error) {
-      console.error("❌ Upload failed:", error)
-      
-      if (error instanceof Error) {
-        if (error.message.includes('authentication') || error.message.includes('permission')) {
-          setShowAuthPrompt(true)
-          toast.error("Authentication required. Please sign in to upload clips.")
-        } else {
-          toast.error(`Upload failed: ${error.message}`)
-        }
-      } else {
-        toast.error("Upload failed. Please try again.")
-      }
     } finally {
       setIsUploading(false)
     }
-  }
+  }, { operation: 'uploadRecording' })
 
   const resetRecorderState = () => {
     setRecordedBlob(null)

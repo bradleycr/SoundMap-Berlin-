@@ -1,4 +1,5 @@
 import withPWA from 'next-pwa'
+// import { withSentryConfig } from '@sentry/nextjs' // Temporarily disabled
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -6,6 +7,7 @@ const nextConfig = {
     serverComponentsExternalPackages: ['@supabase/supabase-js'],
     // Opt-out of automatic vendor-chunk extraction that broke the build
     optimizePackageImports: [],
+    instrumentationHook: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -66,4 +68,26 @@ const config = withPWA({
   ],
 })(nextConfig)
 
+// Export without Sentry for now - clean build first
 export default config
+
+// TODO: Re-enable Sentry after clean build works
+// Enhanced Sentry configuration for SoundMap
+// export default withSentryConfig(config, {
+//   // Sentry build-time configuration
+//   org: "aibuildersclub",
+//   project: "soundmap",
+//   // Only print logs for uploading source maps in CI
+//   silent: !process.env.CI,
+//   // Upload a larger set of source maps for prettier stack traces (increases build time)
+//   widenClientFileUpload: true,
+//   // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers
+//   tunnelRoute: "/monitoring",
+//   // Automatically tree-shake Sentry logger statements to reduce bundle size
+//   disableLogger: true,
+//   // Enables automatic instrumentation of Vercel Cron Monitors
+//   automaticVercelMonitors: true,
+//   // Disable automatic client config since we use instrumentation-client.ts
+//   autoInstrumentServerFunctions: false,
+//   autoInstrumentMiddleware: false,
+// });
