@@ -21,13 +21,21 @@ export function LoginPrompt({
         <p className="text-sm font-pixel text-stone-400">
           {message}
         </p>
-        <button
-          onClick={() => router.push('/login')}
-          className="pixel-button-coral w-full flex items-center justify-center gap-2"
-        >
-          <LogIn className="w-4 h-4" />
-          <span>SIGN IN / SIGN UP</span>
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full pt-4">
+          <button
+            onClick={() => router.back()}
+            className="pixel-button-sand w-full flex items-center justify-center gap-2"
+          >
+            <span>GO BACK</span>
+          </button>
+          <button
+            onClick={() => router.push('/login')}
+            className="pixel-button-coral w-full flex items-center justify-center gap-2"
+          >
+            <LogIn className="w-4 h-4" />
+            <span>SIGN IN / SIGN UP</span>
+          </button>
+        </div>
       </div>
     </div>
   )
