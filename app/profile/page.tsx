@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { createClient, getAuthCallbackUrl } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase"
+import { getAuthCallbackUrl } from "@/lib/utils"
 import { useAuth } from "@/app/providers"
 import { OfflineStorage } from "@/lib/storage"
 import { Input } from "@/components/ui/input"
@@ -365,11 +366,13 @@ export default function ProfilePage() {
 
   if (isLoading || (authLoading && !user)) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-stone-900 to-stone-800 p-4 flex items-center justify-center safe-area-top safe-area-bottom">
-        <div className="text-center">
-          <div className="text-xl mb-4 animate-pulse font-pixel text-sage-400">LOADING PROFILE...</div>
-          <div className="text-xs font-pixel text-stone-500">
-            {authLoading ? "CHECKING SESSION..." : "LOADING DATA..."}
+      <div className="pwa-page">
+        <div className="pwa-content-centered">
+          <div className="text-center">
+            <div className="text-xl mb-4 animate-pulse font-pixel text-sage-400">LOADING PROFILE...</div>
+            <div className="text-xs font-pixel text-stone-500">
+              {authLoading ? "CHECKING SESSION..." : "LOADING DATA..."}
+            </div>
           </div>
         </div>
       </div>
@@ -379,139 +382,144 @@ export default function ProfilePage() {
   const isAnonymous = !user?.email
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-stone-900 to-stone-800 p-4 safe-area-top safe-area-bottom">
+    <div className="pwa-page">
       {/* Header - Mobile optimized */}
-      <div className="flex items-center justify-between mb-6 gap-2">
-        <button
-          onClick={() => router.push("/")}
-          className="pixel-button-sand pixel-button-compact flex items-center gap-2"
-        >
-          <ArrowLeft className="w-3 h-3" />
-          <span className="hidden sm:inline text-mobile-xs">BACK</span>
-        </button>
+      <div className="pwa-header p-4">
+        <div className="flex items-center justify-between gap-2">
+          <button
+            onClick={() => router.push("/")}
+            className="pixel-button-sand pixel-button-compact flex items-center gap-2"
+          >
+            <ArrowLeft className="w-3 h-3" />
+            <span className="hidden sm:inline text-mobile-xs">BACK</span>
+          </button>
 
-        <div className="text-center flex-1">
-          <div className="text-sm sm:text-lg font-pixel text-sage-400">PROFILE</div>
-          <div className="text-xs text-mint-400 font-pixel">{isOnline ? "ONLINE" : "OFFLINE"}</div>
+          <div className="text-center flex-1">
+            <div className="text-sm sm:text-lg font-pixel text-sage-400">PROFILE</div>
+            <div className="text-xs text-mint-400 font-pixel">{isOnline ? "ONLINE" : "OFFLINE"}</div>
+          </div>
+
+          <button
+            onClick={isAnonymous ? () => router.push('/login') : handleSignOut}
+            className={`pixel-button-compact ${isAnonymous ? "pixel-button-coral" : "pixel-button-mint"} flex items-center gap-1`}
+            title={isAnonymous ? "Sign in or Sign up" : "Sign out"}
+          >
+            {isAnonymous ? (
+              <>
+                <LogIn className="w-3 h-3" />
+                <span className="text-mobile-xs font-pixel">SIGN IN</span>
+              </>
+            ) : (
+              <>
+                <LogOut className="w-3 h-3" />
+                <span className="text-mobile-xs font-pixel">SIGN OUT</span>
+              </>
+            )}
+          </button>
         </div>
-
-        <button
-          onClick={isAnonymous ? () => router.push('/login') : handleSignOut}
-          className={`pixel-button-compact ${isAnonymous ? "pixel-button-coral" : "pixel-button-mint"} flex items-center gap-1`}
-          title={isAnonymous ? "Sign in or Sign up" : "Sign out"}
-        >
-          {isAnonymous ? (
-            <>
-              <LogIn className="w-3 h-3" />
-              <span className="text-mobile-xs font-pixel">SIGN IN</span>
-            </>
-          ) : (
-            <>
-              <LogOut className="w-3 h-3" />
-              <span className="text-mobile-xs font-pixel">SIGN OUT</span>
-            </>
-          )}
-        </button>
       </div>
 
-      <div className="max-w-md mx-auto space-y-6">
-        {/* Profile Info */}
-        <div className="retro-border p-4 space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <User className="w-6 h-6 text-sage-400 flex-shrink-0" />
-              <div className="min-w-0 flex-1">
-                {isEditing ? (
-                  <Input
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="bg-stone-800 border-sage-400 text-sage-400 font-pixel text-sm"
-                    maxLength={30}
-                  />
-                ) : (
-                  <div className="text-sm sm:text-lg font-pixel text-sage-400 truncate">{displayName}</div>
-                )}
-                <div className="text-xs font-pixel text-stone-400 truncate">
-                  {isAnonymous ? "ANONYMOUS USER" : user?.email}
+      {/* Content */}
+      <div className="pwa-content p-4">
+        <div className="max-w-md mx-auto space-y-6">
+          {/* Profile Info */}
+          <div className="retro-border p-4 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <User className="w-6 h-6 text-sage-400 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  {isEditing ? (
+                    <Input
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      className="bg-stone-800 border-sage-400 text-sage-400 font-pixel text-sm"
+                      maxLength={30}
+                    />
+                  ) : (
+                    <div className="text-sm sm:text-lg font-pixel text-sage-400 truncate">{displayName}</div>
+                  )}
+                  <div className="text-xs font-pixel text-stone-400 truncate">
+                    {isAnonymous ? "ANONYMOUS USER" : user?.email}
+                  </div>
                 </div>
               </div>
+
+              {isAnonymous ? (
+                <button onClick={() => setIsEditing(!isEditing)} className="pixel-button-sand pixel-button-icon">
+                  <Edit3 className="w-3 h-3" />
+                </button>
+              ) : (
+                <button onClick={handleSignOut} className="pixel-button-coral pixel-button-icon">
+                  <LogOut className="w-3 h-3" />
+                </button>
+              )}
             </div>
 
-            {isAnonymous ? (
-              <button onClick={() => setIsEditing(!isEditing)} className="pixel-button-sand pixel-button-icon">
-                <Edit3 className="w-3 h-3" />
-              </button>
-            ) : (
-              <button onClick={handleSignOut} className="pixel-button-coral pixel-button-icon">
-                <LogOut className="w-3 h-3" />
-              </button>
+            {isEditing && (
+              <div className="flex gap-2">
+                <button onClick={handleUpdateProfile} className="pixel-button-mint flex-1">
+                  SAVE
+                </button>
+                <button onClick={() => setIsEditing(false)} className="pixel-button-coral flex-1">
+                  CANCEL
+                </button>
+              </div>
             )}
-          </div>
 
-          {isEditing && (
-            <div className="flex gap-2">
-              <button onClick={handleUpdateProfile} className="pixel-button-mint flex-1">
-                SAVE
-              </button>
-              <button onClick={() => setIsEditing(false)} className="pixel-button-coral flex-1">
-                CANCEL
-              </button>
-            </div>
-          )}
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-stone-600">
-            <div className="text-center">
-              <div className="text-lg font-pixel text-coral-400">{recordedClips.length}</div>
-              <div className="text-xs font-pixel text-stone-400">RECORDED</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-pixel text-mint-400">{likedClips.length}</div>
-              <div className="text-xs font-pixel text-stone-400">LIKED</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-pixel text-sand-400">{archivedClips.length}</div>
-              <div className="text-xs font-pixel text-stone-400">ARCHIVED</div>
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4 pt-4 border-t border-stone-600">
+              <div className="text-center">
+                <div className="text-lg font-pixel text-coral-400">{recordedClips.length}</div>
+                <div className="text-xs font-pixel text-stone-400">RECORDED</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-pixel text-mint-400">{likedClips.length}</div>
+                <div className="text-xs font-pixel text-stone-400">LIKED</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-pixel text-sand-400">{archivedClips.length}</div>
+                <div className="text-xs font-pixel text-stone-400">ARCHIVED</div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Tabs - Mobile optimized */}
-        <div className="flex gap-1 retro-border p-1">
-          <button
-            onClick={() => setActiveTab("recorded")}
-            className={`flex-1 py-3 px-2 font-pixel text-xs uppercase transition-all ${
-              activeTab === "recorded" ? "bg-coral-400 text-stone-900" : "text-coral-400 hover:bg-coral-400/20"
-            }`}
-          >
-            <Mic className="w-3 h-3 mx-auto mb-1" />
-            <div className="text-mobile-xs">RECORDED</div>
-          </button>
-          <button
-            onClick={() => setActiveTab("liked")}
-            className={`flex-1 py-3 px-2 font-pixel text-xs uppercase transition-all ${
-              activeTab === "liked" ? "bg-mint-400 text-stone-900" : "text-mint-400 hover:bg-mint-400/20"
-            }`}
-          >
-            <Heart className="w-3 h-3 mx-auto mb-1" />
-            <div className="text-mobile-xs">LIKED</div>
-          </button>
-          <button
-            onClick={() => setActiveTab("archived")}
-            className={`flex-1 py-3 px-2 font-pixel text-xs uppercase transition-all ${
-              activeTab === "archived" ? "bg-sand-400 text-stone-900" : "text-sand-400 hover:bg-sand-400/20"
-            }`}
-          >
-            <Archive className="w-3 h-3 mx-auto mb-1" />
-            <div className="text-mobile-xs">ARCHIVED</div>
-          </button>
-        </div>
+          {/* Tabs - Mobile optimized */}
+          <div className="flex gap-1 retro-border p-1">
+            <button
+              onClick={() => setActiveTab("recorded")}
+              className={`flex-1 py-3 px-2 font-pixel text-xs uppercase transition-all ${
+                activeTab === "recorded" ? "bg-coral-400 text-stone-900" : "text-coral-400 hover:bg-coral-400/20"
+              }`}
+            >
+              <Mic className="w-3 h-3 mx-auto mb-1" />
+              <div className="text-mobile-xs">RECORDED</div>
+            </button>
+            <button
+              onClick={() => setActiveTab("liked")}
+              className={`flex-1 py-3 px-2 font-pixel text-xs uppercase transition-all ${
+                activeTab === "liked" ? "bg-mint-400 text-stone-900" : "text-mint-400 hover:bg-mint-400/20"
+              }`}
+            >
+              <Heart className="w-3 h-3 mx-auto mb-1" />
+              <div className="text-mobile-xs">LIKED</div>
+            </button>
+            <button
+              onClick={() => setActiveTab("archived")}
+              className={`flex-1 py-3 px-2 font-pixel text-xs uppercase transition-all ${
+                activeTab === "archived" ? "bg-sand-400 text-stone-900" : "text-sand-400 hover:bg-sand-400/20"
+              }`}
+            >
+              <Archive className="w-3 h-3 mx-auto mb-1" />
+              <div className="text-mobile-xs">ARCHIVED</div>
+            </button>
+          </div>
 
-        {/* Content */}
-        <div className="space-y-4">
-          {activeTab === "recorded" && renderClipList(recordedClips, true)}
-          {activeTab === "liked" && renderClipList(likedClips)}
-          {activeTab === "archived" && renderClipList(archivedClips)}
+          {/* Content */}
+          <div className="space-y-4">
+            {activeTab === "recorded" && renderClipList(recordedClips, true)}
+            {activeTab === "liked" && renderClipList(likedClips)}
+            {activeTab === "archived" && renderClipList(archivedClips)}
+          </div>
         </div>
       </div>
     </div>

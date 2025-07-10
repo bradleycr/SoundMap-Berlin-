@@ -50,12 +50,6 @@ export const viewport: Viewport = {
  * Provides global providers and error boundaries
  * Includes PWA metadata and mobile optimizations
  */
-function ProvidersWrapper({ children }: { children: React.ReactNode }) {
-  // Use the new hook to get auth state and actions
-  const auth = useAuthLogic()
-  return <AuthProvider value={auth}>{children}</AuthProvider>
-}
-
 export default function RootLayout({
   children,
 }: {
@@ -96,7 +90,7 @@ export default function RootLayout({
           />
         )}
       </head>
-      <body className="bg-stone-900 text-sage-400 font-pixel antialiased safe-area-top safe-area-bottom">
+      <body>
         <ErrorBoundary>
           <ToastProvider>
             <AuthProviderWrapper>

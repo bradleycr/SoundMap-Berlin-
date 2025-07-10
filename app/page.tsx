@@ -76,16 +76,18 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-stone-900 to-stone-800">
-        <div className="text-center">
-          <div className="text-xl mb-4 animate-pulse font-pixel text-sage-400">LOADING...</div>
+      <div className="pwa-page">
+        <div className="pwa-content-centered">
+          <div className="text-center">
+            <div className="text-xl mb-4 animate-pulse font-pixel text-sage-400">LOADING...</div>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-b from-stone-900 to-stone-800">
+    <div className="pwa-page">
       {/* Subtle Map Lines Background */}
       <div className="absolute inset-0 opacity-10">
         <svg className="w-full h-full" viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice">
@@ -123,8 +125,8 @@ export default function HomePage() {
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4 safe-area-top safe-area-bottom">
-        <div className="text-center max-w-sm mx-auto space-y-6 w-full">
+      <div className="pwa-content-centered">
+        <div className="text-center max-w-sm mx-auto space-y-6 w-full p-4">
           {/* Logo with branding - Mobile optimized */}
           <div className="space-y-3">
             <h1 className="text-2xl sm:text-4xl md:text-6xl font-pixel text-sage-400 neon-glow animate-logo-pulse tracking-tight leading-tight">

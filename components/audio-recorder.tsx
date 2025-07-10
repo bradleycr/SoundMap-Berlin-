@@ -247,20 +247,24 @@ export function AudioRecorder() {
   // 1. Authentication Prompt State
   if (showAuthPrompt) {
     return (
-      <div className="space-y-6 max-w-md mx-auto w-full text-center">
-        <LogIn className="w-16 h-16 text-coral-400 mx-auto" />
-        <h2 className="text-xl font-pixel text-coral-400">AUTHENTICATION REQUIRED</h2>
-        <p className="text-sm font-pixel text-stone-400">
-          To upload audio clips, you need to sign in. This helps prevent spam and lets you manage your recordings.
-        </p>
-        <div className="flex gap-2 justify-center pt-4">
-          <Button onClick={handleSignInPrompt} className="pixel-button-mint">
-            <LogIn className="w-4 h-4 mr-2" />
-            SIGN IN
-          </Button>
-          <Button onClick={() => setShowAuthPrompt(false)} className="pixel-button-sand">
-            GO BACK
-          </Button>
+      <div className="pwa-page">
+        <div className="pwa-content-centered">
+          <div className="space-y-6 max-w-md mx-auto w-full text-center">
+            <LogIn className="w-16 h-16 text-coral-400 mx-auto" />
+            <h2 className="text-xl font-pixel text-coral-400">AUTHENTICATION REQUIRED</h2>
+            <p className="text-sm font-pixel text-stone-400">
+              To upload audio clips, you need to sign in. This helps prevent spam and lets you manage your recordings.
+            </p>
+            <div className="flex gap-2 justify-center pt-4">
+              <Button onClick={handleSignInPrompt} className="pixel-button-mint">
+                <LogIn className="w-4 h-4 mr-2" />
+                SIGN IN
+              </Button>
+              <Button onClick={() => setShowAuthPrompt(false)} className="pixel-button-sand">
+                GO BACK
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -269,19 +273,23 @@ export function AudioRecorder() {
   // 2. Success State
   if (uploadSuccess) {
     return (
-      <div className="space-y-6 max-w-md mx-auto w-full text-center">
-        <PartyPopper className="w-16 h-16 text-mint-400 mx-auto" />
-        <h2 className="text-xl font-pixel text-sage-400">UPLOAD COMPLETE</h2>
-        <p className="text-xs font-pixel text-stone-400">Your sound is now live on the map!</p>
-        <div className="flex gap-2 justify-center pt-4">
-          <Button onClick={() => router.push('/map')} className="pixel-button-sand">
-            <Map className="w-4 h-4 mr-2" />
-            VIEW MAP
-          </Button>
-          <Button onClick={() => router.push('/profile')} className="pixel-button-mint">
-            <Ear className="w-4 h-4 mr-2" />
-            VIEW MY CLIPS
-          </Button>
+      <div className="pwa-page">
+        <div className="pwa-content-centered">
+          <div className="space-y-6 max-w-md mx-auto w-full text-center">
+            <PartyPopper className="w-16 h-16 text-mint-400 mx-auto" />
+            <h2 className="text-xl font-pixel text-sage-400">UPLOAD COMPLETE</h2>
+            <p className="text-xs font-pixel text-stone-400">Your sound is now live on the map!</p>
+            <div className="flex gap-2 justify-center pt-4">
+              <Button onClick={() => router.push('/map')} className="pixel-button-sand">
+                <Map className="w-4 h-4 mr-2" />
+                VIEW MAP
+              </Button>
+              <Button onClick={() => router.push('/profile')} className="pixel-button-mint">
+                <Ear className="w-4 h-4 mr-2" />
+                VIEW MY CLIPS
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -290,110 +298,139 @@ export function AudioRecorder() {
   // 3. Preview & Upload State
   if (recordedBlob) {
     return (
-      <div className="space-y-4 max-w-md mx-auto w-full">
-        <h2 className="text-lg font-pixel text-center text-sage-400">PREVIEW & SAVE</h2>
-        
-        {/* Title & Radius */}
-        <div className="space-y-3">
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Clip title (e.g., 'Sounds of the U-Bahn')"
-            className="w-full px-3 py-2 retro-border bg-stone-800 text-sm font-pixel placeholder-stone-500 focus:outline-none"
-            required
-          />
-          <div className="flex items-center gap-2 text-xs font-pixel text-stone-400">
-            <span>PLAYABLE RADIUS</span>
-            <input
-              type="range"
-              value={radius}
-              min={20}
-              max={500}
-              step={10}
-              onChange={(e) => setRadius(Number(e.target.value))}
-              className="flex-1 slider"
+      <div className="pwa-page">
+        {/* Header */}
+        <div className="pwa-header p-4">
+          <div className="flex items-center justify-between">
+            <Button onClick={resetRecorderState} className="pixel-button-sand">
+              <Trash2 className="w-4 h-4 mr-2" />
+              RETAKE
+            </Button>
+            <div className="text-center">
+              <div className="text-lg font-pixel text-sage-400">PREVIEW & SAVE</div>
+            </div>
+            <Button 
+              onClick={uploadRecording} 
+              className="pixel-button-mint" 
+              disabled={isUploading || !title.trim()}
+            >
+              {isUploading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              {isUploading ? "UPLOADING…" : "SAVE"}
+            </Button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="pwa-content p-4">
+          <div className="space-y-4 max-w-md mx-auto w-full">
+            {/* Title & Radius */}
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Clip title (e.g., 'Sounds of the U-Bahn')"
+                className="w-full px-3 py-2 retro-border bg-stone-800 text-sm font-pixel placeholder-stone-500 focus:outline-none"
+                required
+              />
+              <div className="flex items-center gap-2 text-xs font-pixel text-stone-400">
+                <span>PLAYABLE RADIUS</span>
+                <input
+                  type="range"
+                  value={radius}
+                  min={20}
+                  max={500}
+                  step={10}
+                  onChange={(e) => setRadius(Number(e.target.value))}
+                  className="flex-1 slider"
+                />
+                <span className="w-12 text-right">{radius} METERS</span>
+              </div>
+            </div>
+
+            {/* Audio Player */}
+            <AudioPlayer
+              src={URL.createObjectURL(recordedBlob)}
+              isPlaying={isPlaying}
+              onPlayPause={(p) => setIsPlaying(p)}
             />
-            <span className="w-12 text-right">{radius} METERS</span>
-          </div>
-        </div>
 
-        {/* Audio Player */}
-        <AudioPlayer
-          src={URL.createObjectURL(recordedBlob)}
-          isPlaying={isPlaying}
-          onPlayPause={(p) => setIsPlaying(p)}
-        />
-
-        {/* Action Buttons */}
-        <div className="flex gap-2 justify-center">
-          <Button onClick={resetRecorderState} className="pixel-button-sand">
-            <Trash2 className="w-4 h-4 mr-2" />
-            RETAKE
-          </Button>
-          <Button 
-            onClick={uploadRecording} 
-            className="pixel-button-mint" 
-            disabled={isUploading || !title.trim()}
-          >
-            {isUploading ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4 mr-2" />
+            {/* User status indicator */}
+            {user && (
+              <div className="text-center text-xs font-pixel text-stone-500">
+                {user.user_metadata?.anonymous ? "UPLOADING AS ANONYMOUS USER" : `UPLOADING AS ${user.email}`}
+              </div>
             )}
-            {isUploading ? "UPLOADING…" : "SAVE CLIP"}
-          </Button>
-        </div>
-
-        {/* User status indicator */}
-        {user && (
-          <div className="text-center text-xs font-pixel text-stone-500">
-            {user.user_metadata?.anonymous ? "UPLOADING AS ANONYMOUS USER" : `UPLOADING AS ${user.email}`}
           </div>
-        )}
+        </div>
       </div>
     )
   }
 
   // 4. Default/Recording State
   return (
-    <div className="flex flex-col items-center justify-center space-y-8 w-full text-center">
-      {/* Button and Visualizer Area */}
-      <div className="relative h-48 flex items-center justify-center">
-        {isRecording ? (
-          // Recording State
-          <div className="flex flex-col items-center justify-center space-y-4">
-            <Button
-              onClick={stopRecording}
-              className="pixel-button-coral w-32 h-32 rounded-full animate-pulse"
-            >
-              <StopCircle className="w-12 h-12" />
-            </Button>
-            <div className="text-lg font-pixel text-sage-400">
-              {recordingTime}s / {MAX_RECORDING_SECONDS}s
-            </div>
-          </div>
-        ) : (
-          // Pre-Recording State
-          <Button
-            onClick={startRecording}
-            className="w-40 h-40 rounded-full bg-coral-500/10 text-coral-400 hover:bg-coral-500/20 transition-all duration-300 ease-in-out flex items-center justify-center animate-pulse-slow border-2 border-dashed border-coral-500/30"
-          >
-            <Mic className="w-16 h-16" />
+    <div className="pwa-page">
+      {/* Header */}
+      <div className="pwa-header p-4">
+        <div className="flex items-center justify-between">
+          <Button onClick={() => router.push('/')} className="pixel-button-sand">
+            HOME
           </Button>
-        )}
+          <div className="text-center">
+            <div className="text-lg font-pixel text-sage-400">RECORD CLIP</div>
+            <div className="text-xs text-mint-400 font-pixel">UP TO 60 SECONDS</div>
+          </div>
+          <Button onClick={() => router.push('/profile')} className="pixel-button-mint">
+            PROFILE
+          </Button>
+        </div>
       </div>
 
-      {/* Instructional Text & Visualizer */}
-      <div className="h-24 flex flex-col items-center justify-center">
-        {isRecording ? (
-          <WaveformVisualizer stream={mediaStreamRef.current} isRecording={isRecording} width={280} height={60} />
-        ) : (
-          <div className="space-y-2">
-            <h2 className="text-xl sm:text-2xl font-pixel text-sand-400">Tap the mic to start</h2>
-            <p className="text-sm text-stone-400">(Up to 60 seconds)</p>
+      {/* Content */}
+      <div className="pwa-content-centered">
+        <div className="flex flex-col items-center justify-center space-y-8 w-full text-center p-4">
+          {/* Button and Visualizer Area */}
+          <div className="relative h-48 flex items-center justify-center">
+            {isRecording ? (
+              // Recording State
+              <div className="flex flex-col items-center justify-center space-y-4">
+                <Button
+                  onClick={stopRecording}
+                  className="pixel-button-coral w-32 h-32 rounded-full animate-pulse"
+                >
+                  <StopCircle className="w-12 h-12" />
+                </Button>
+                <div className="text-lg font-pixel text-sage-400">
+                  {recordingTime}s / {MAX_RECORDING_SECONDS}s
+                </div>
+              </div>
+            ) : (
+              // Pre-Recording State
+              <Button
+                onClick={startRecording}
+                className="w-40 h-40 rounded-full bg-coral-500/10 text-coral-400 hover:bg-coral-500/20 transition-all duration-300 ease-in-out flex items-center justify-center animate-pulse-slow border-2 border-dashed border-coral-500/30"
+              >
+                <Mic className="w-16 h-16" />
+              </Button>
+            )}
           </div>
-        )}
+
+          {/* Instructional Text & Visualizer */}
+          <div className="h-24 flex flex-col items-center justify-center">
+            {isRecording ? (
+              <WaveformVisualizer stream={mediaStreamRef.current} isRecording={isRecording} width={280} height={60} />
+            ) : (
+              <div className="space-y-2">
+                <h2 className="text-xl sm:text-2xl font-pixel text-sand-400">Tap the mic to start</h2>
+                <p className="text-sm text-stone-400">(Up to 60 seconds)</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )

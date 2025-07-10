@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
-import { createClient, isSupabaseConnected, testSupabaseConnection } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase"
+import { testSupabaseConnection } from "@/lib/utils"
 import type { User } from "@supabase/supabase-js"
 import { AppError, ErrorType, ErrorSeverity, handleError, withErrorHandling } from "@/lib/error-handler"
 

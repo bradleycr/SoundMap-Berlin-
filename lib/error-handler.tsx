@@ -255,32 +255,34 @@ export function createErrorBoundaryFallback(componentName: string) {
     reportError(error, { component: componentName }, ErrorSeverity.HIGH);
     
     return (
-      <div className="min-h-screen bg-gradient-to-b from-stone-900 to-stone-800 p-4 flex items-center justify-center">
-        <div className="max-w-md mx-auto text-center space-y-6">
-          <div className="retro-border p-6 space-y-4">
-            <div className="text-xl font-pixel text-coral-400">COMPONENT ERROR</div>
-            <div className="text-sm font-pixel text-stone-400">
-              {componentName} encountered an error
+      <div className="pwa-page">
+        <div className="pwa-content-centered">
+          <div className="max-w-md mx-auto text-center space-y-6 p-4">
+            <div className="retro-border p-6 space-y-4">
+              <div className="text-xl font-pixel text-coral-400">COMPONENT ERROR</div>
+              <div className="text-sm font-pixel text-stone-400">
+                {componentName} encountered an error
+              </div>
+              <div className="text-xs font-pixel text-stone-500">
+                {getUserFriendlyMessage(error)}
+              </div>
             </div>
-            <div className="text-xs font-pixel text-stone-500">
-              {getUserFriendlyMessage(error)}
-            </div>
-          </div>
-          
-          <div className="space-y-3">
-            <button 
-              onClick={retry}
-              className="pixel-button-mint w-full"
-            >
-              TRY AGAIN
-            </button>
             
-            <button 
-              onClick={() => window.location.href = "/"}
-              className="pixel-button-sand w-full"
-            >
-              GO HOME
-            </button>
+            <div className="space-y-3">
+              <button 
+                onClick={retry}
+                className="pixel-button-mint w-full"
+              >
+                TRY AGAIN
+              </button>
+              
+              <button 
+                onClick={() => window.location.href = "/"}
+                className="pixel-button-sand w-full"
+              >
+                GO HOME
+              </button>
+            </div>
           </div>
         </div>
       </div>

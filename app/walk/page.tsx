@@ -331,11 +331,13 @@ export default function WalkPage() {
 
   if (isLoading || (authLoading && !currentPosition)) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-stone-900 to-stone-800 p-4 flex items-center justify-center safe-area-top safe-area-bottom">
-        <div className="text-center">
-          <div className="text-2xl mb-4 animate-pulse font-pixel text-sage-400">LOCATING...</div>
-          <div className="text-sm font-pixel text-mint-400">
-            {authLoading ? "CHECKING SESSION..." : "GETTING PRECISE LOCATION..."}
+      <div className="pwa-page">
+        <div className="pwa-content-centered">
+          <div className="text-center">
+            <div className="text-2xl mb-4 animate-pulse font-pixel text-sage-400">LOCATING...</div>
+            <div className="text-sm font-pixel text-mint-400">
+              {authLoading ? "CHECKING SESSION..." : "GETTING PRECISE LOCATION..."}
+            </div>
           </div>
         </div>
       </div>
@@ -344,148 +346,159 @@ export default function WalkPage() {
 
   if (!currentPosition) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-stone-900 to-stone-800 p-4 flex items-center justify-center safe-area-top safe-area-bottom">
-        <div className="text-center space-y-4">
-          <div className="text-xl font-pixel text-coral-400">LOCATION REQUIRED</div>
-          <div className="text-sm font-pixel text-stone-400">
-            WALKING MODE NEEDS YOUR LOCATION TO DISCOVER NEARBY CLIPS
+      <div className="pwa-page">
+        <div className="pwa-content-centered">
+          <div className="text-center space-y-4">
+            <div className="text-xl font-pixel text-coral-400">LOCATION REQUIRED</div>
+            <div className="text-sm font-pixel text-stone-400">
+              WALKING MODE NEEDS YOUR LOCATION TO DISCOVER NEARBY CLIPS
+            </div>
+            <Button onClick={() => router.push("/map")} className="pixel-button-mint">
+              EXPLORE MAP INSTEAD
+            </Button>
           </div>
-          <Button onClick={() => router.push("/map")} className="pixel-button-mint">
-            EXPLORE MAP INSTEAD
-          </Button>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-stone-900 to-stone-800 p-4 safe-area-top safe-area-bottom">
+    <div className="pwa-page">
       {/* Simplified Header for Walking */}
-      <div className="flex items-center justify-between mb-4">
-        <Button onClick={() => router.push("/")} className="pixel-button-sand">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          EXIT
-        </Button>
-        <div className="text-center">
-          <div className="text-lg font-pixel text-coral-400">WALKING MODE</div>
-          <div className="text-xs text-mint-400 font-pixel flex items-center justify-center gap-2">
-            {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-            LIVE TRACKING
+      <div className="pwa-header p-4">
+        <div className="flex items-center justify-between">
+          <Button onClick={() => router.push("/")} className="pixel-button-sand">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            EXIT
+          </Button>
+          <div className="text-center">
+            <div className="text-lg font-pixel text-coral-400">WALKING MODE</div>
+            <div className="text-xs text-mint-400 font-pixel flex items-center justify-center gap-2">
+              {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+              LIVE TRACKING
+            </div>
           </div>
-        </div>
-        <div className="flex gap-1">
-          <Button 
-            onClick={() => setShowCompass(!showCompass)} 
-            className={`pixel-button-mint text-xs p-2 ${showCompass ? 'bg-mint-400 text-stone-900' : ''}`}
-          >
-            <Navigation className="w-3 h-3" />
-          </Button>
-          <Button onClick={() => setShowMap(!showMap)} className="pixel-button-sage text-xs p-2">
-            <Map className="w-3 h-3" />
-          </Button>
-          <Button onClick={() => router.push("/profile")} className="pixel-button-sand text-xs p-2">
-            <User className="w-3 h-3" />
-          </Button>
+          <div className="flex gap-1">
+            <Button 
+              onClick={() => setShowCompass(!showCompass)} 
+              className={`pixel-button-mint text-xs p-2 ${showCompass ? 'bg-mint-400 text-stone-900' : ''}`}
+            >
+              <Navigation className="w-3 h-3" />
+            </Button>
+            <Button onClick={() => setShowMap(!showMap)} className="pixel-button-sage text-xs p-2">
+              <Map className="w-3 h-3" />
+            </Button>
+            <Button onClick={() => router.push("/profile")} className="pixel-button-sand text-xs p-2">
+              <User className="w-3 h-3" />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Focused Walk Map */}
-      {showMap && (
-        <div className="mb-6 flex justify-center">
-          <FocusedWalkMap
-            clips={allClips}
-            currentPosition={currentPosition}
-            nearbyClips={nearbyClips}
-            currentlyPlaying={currentClip?.id}
-            onClipClick={handleClipClick}
-            showCompass={showCompass}
-          />
-        </div>
-      )}
-
-      {/* Audio Player Section - Simplified for Walking */}
-      <div className="max-w-sm mx-auto space-y-4">
-        {currentClip ? (
-          <>
-            {/* Now Playing Card */}
-            <div className="retro-border p-4 text-center space-y-3 bg-stone-800/50">
-              <div className="text-lg font-pixel text-coral-400">NOW PLAYING</div>
-              <div className="text-sm font-pixel text-sand-400 line-clamp-2">{currentClip.title}</div>
-              <div className="text-xs text-gray-400 font-pixel">
-                {currentClipIndex + 1} OF {nearbyClips.length} NEARBY
-                {nearbyClips.length > 1 && (
-                  <div className="mt-1">♥ {currentClip.like_count} • {new Date(currentClip.created_at).toLocaleDateString()}</div>
-                )}
-              </div>
+      {/* Content */}
+      <div className="pwa-content p-4 space-y-6">
+        {/* Focused Walk Map */}
+        {showMap && (
+          <div className="flex justify-center">
+            <div className="map-container">
+              <FocusedWalkMap
+                clips={allClips}
+                currentPosition={currentPosition}
+                nearbyClips={nearbyClips}
+                currentlyPlaying={currentClip?.id}
+                onClipClick={handleClipClick}
+                showCompass={showCompass}
+              />
             </div>
-
-            {/* Audio Player */}
-            <AudioPlayer 
-              src={currentClip.url} 
-              isPlaying={isPlaying} 
-              onPlayPause={setIsPlaying} 
-              onEnded={handleSkip} 
-            />
-
-            {/* Walking Controls - Large buttons for mobile */}
-            <div className="grid grid-cols-3 gap-3">
-              <Button
-                onClick={() => handleLike(currentClip.id)}
-                disabled={userLikes.includes(currentClip.id)}
-                className="pixel-button-mint h-12 flex-col"
-              >
-                <Heart className="w-4 h-4 mb-1" />
-                <span className="text-xs">LIKE</span>
-              </Button>
-
-              <Button 
-                onClick={handleSkip} 
-                disabled={nearbyClips.length <= 1} 
-                className="pixel-button h-12 flex-col"
-              >
-                <SkipForward className="w-4 h-4 mb-1" />
-                <span className="text-xs">SKIP</span>
-              </Button>
-
-              <Button 
-                onClick={() => handleDislike(currentClip.id)} 
-                className="pixel-button-coral h-12 flex-col"
-              >
-                <X className="w-4 h-4 mb-1" />
-                <span className="text-xs">HIDE</span>
-              </Button>
-            </div>
-
-            {/* Queue Preview */}
-            {nearbyClips.length > 1 && (
-              <div className="text-center text-xs font-pixel text-gray-400 space-y-1">
-                <div className="text-mint-400">
-                  NEXT: {nearbyClips.slice(1, 3).map((c) => c.title.substring(0, 20) + (c.title.length > 20 ? '...' : '')).join(', ')}
-                  {nearbyClips.length > 3 && ` +${nearbyClips.length - 3} more`}
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="text-center space-y-4">
-            <div className="retro-border p-6 bg-stone-800/30">
-              <div className="text-lg font-pixel text-sage-400 mb-2">NO SOUNDS NEARBY</div>
-              <div className="text-sm font-pixel text-gray-400 mb-3">KEEP WALKING TO DISCOVER CLIPS</div>
-              <div className="text-xs font-pixel text-stone-500">
-                SEARCH RADIUS: 100M • TOTAL CLIPS: {allClips.length}
-              </div>
-            </div>
-
-            <Button onClick={() => router.push("/record")} className="pixel-button-coral w-full h-12">
-              BE THE FIRST TO RECORD HERE
-            </Button>
           </div>
         )}
+
+        {/* Audio Player Section - Simplified for Walking */}
+        <div className="max-w-sm mx-auto space-y-4">
+          {currentClip ? (
+            <>
+              {/* Now Playing Card */}
+              <div className="retro-border p-4 text-center space-y-3 bg-stone-800/50">
+                <div className="text-lg font-pixel text-coral-400">NOW PLAYING</div>
+                <div className="text-sm font-pixel text-sand-400 line-clamp-2">{currentClip.title}</div>
+                <div className="text-xs text-gray-400 font-pixel">
+                  {currentClipIndex + 1} OF {nearbyClips.length} NEARBY
+                  {nearbyClips.length > 1 && (
+                    <div className="mt-1">♥ {currentClip.like_count} • {new Date(currentClip.created_at).toLocaleDateString()}</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Audio Player */}
+              <AudioPlayer 
+                src={currentClip.url} 
+                isPlaying={isPlaying} 
+                onPlayPause={setIsPlaying} 
+                onEnded={handleSkip} 
+              />
+
+              {/* Walking Controls - Large buttons for mobile */}
+              <div className="grid grid-cols-3 gap-3">
+                <Button
+                  onClick={() => handleLike(currentClip.id)}
+                  disabled={userLikes.includes(currentClip.id)}
+                  className="pixel-button-mint h-12 flex-col"
+                >
+                  <Heart className="w-4 h-4 mb-1" />
+                  <span className="text-xs">LIKE</span>
+                </Button>
+
+                <Button 
+                  onClick={handleSkip} 
+                  disabled={nearbyClips.length <= 1} 
+                  className="pixel-button h-12 flex-col"
+                >
+                  <SkipForward className="w-4 h-4 mb-1" />
+                  <span className="text-xs">SKIP</span>
+                </Button>
+
+                <Button 
+                  onClick={() => handleDislike(currentClip.id)} 
+                  className="pixel-button-coral h-12 flex-col"
+                >
+                  <X className="w-4 h-4 mb-1" />
+                  <span className="text-xs">HIDE</span>
+                </Button>
+              </div>
+
+              {/* Queue Preview */}
+              {nearbyClips.length > 1 && (
+                <div className="text-center text-xs font-pixel text-gray-400 space-y-1">
+                  <div className="text-mint-400">
+                    NEXT: {nearbyClips.slice(1, 3).map((c) => c.title.substring(0, 20) + (c.title.length > 20 ? '...' : '')).join(', ')}
+                    {nearbyClips.length > 3 && ` +${nearbyClips.length - 3} more`}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center space-y-4">
+              <div className="retro-border p-6 bg-stone-800/30">
+                <div className="text-lg font-pixel text-sage-400 mb-2">NO SOUNDS NEARBY</div>
+                <div className="text-sm font-pixel text-gray-400 mb-3">KEEP WALKING TO DISCOVER CLIPS</div>
+                <div className="text-xs font-pixel text-stone-500">
+                  SEARCH RADIUS: 100M • TOTAL CLIPS: {allClips.length}
+                </div>
+              </div>
+
+              <Button onClick={() => router.push("/record")} className="pixel-button-coral w-full h-12">
+                BE THE FIRST TO RECORD HERE
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Walking Stats Footer */}
-      <div className="fixed bottom-4 left-4 right-4 text-center text-xs font-pixel text-gray-600 bg-stone-900/60 p-2 rounded">
-        NEARBY: {nearbyClips.length} • RANGE: 100M • {isOnline ? "LIVE" : "OFFLINE"}
+      <div className="pwa-footer p-2">
+        <div className="text-center text-xs font-pixel text-gray-600">
+          NEARBY: {nearbyClips.length} • RANGE: 100M • {isOnline ? "LIVE" : "OFFLINE"}
+        </div>
       </div>
     </div>
   )

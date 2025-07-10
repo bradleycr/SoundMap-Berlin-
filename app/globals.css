@@ -53,28 +53,100 @@
     box-sizing: border-box;
   }
 
+  /* PWA-Optimized Root Elements */
   html {
     height: 100%;
-    overflow-x: hidden;
+    width: 100%;
+    position: fixed;
+    overflow: hidden;
     /* Prevent zoom on input focus */
     -webkit-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
+    /* Prevent elastic scrolling */
+    overscroll-behavior: none;
+    /* Disable pull-to-refresh */
+    overscroll-behavior-y: contain;
   }
 
   body {
-    height: 100%;
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile */
+    width: 100vw;
+    width: 100dvw; /* Dynamic viewport width for mobile */
+    position: fixed;
+    top: 0;
+    left: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
     font-family: var(--font-pixel);
     background: #2d2a26;
     color: #a8b5a0;
-    /* Prevent pull-to-refresh */
+    /* Prevent pull-to-refresh and elastic scrolling */
+    overscroll-behavior: none;
     overscroll-behavior-y: contain;
-    /* Smooth scrolling */
+    /* Smooth scrolling for internal content */
     -webkit-overflow-scrolling: touch;
     /* Prevent text selection on UI elements */
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+    /* Prevent iOS Safari bottom bar issues */
+    -webkit-appearance: none;
+  }
+
+  /* PWA Container - All pages should use this */
+  .pwa-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 100vh;
+    height: 100dvh;
+    width: 100vw;
+    width: 100dvw;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* PWA Scrollable Content - Use for content that needs to scroll */
+  .pwa-scrollable {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    /* Hide scrollbar but keep functionality */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .pwa-scrollable::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* PWA Fixed Header/Footer */
+  .pwa-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    flex-shrink: 0;
+    background: rgba(45, 42, 38, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(168, 181, 160, 0.1);
+  }
+
+  .pwa-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 50;
+    flex-shrink: 0;
+    background: rgba(45, 42, 38, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(168, 181, 160, 0.1);
   }
 
   /* Allow text selection in inputs and content areas */
@@ -95,10 +167,21 @@
     font-size: 16px;
   }
 
-  /* Hide scrollbars but keep functionality */
+  /* Hide scrollbars globally but keep functionality */
   ::-webkit-scrollbar {
     width: 0px;
     background: transparent;
+  }
+
+  /* Prevent address bar hiding issues on mobile */
+  @supports (-webkit-touch-callout: none) {
+    body {
+      height: -webkit-fill-available;
+    }
+    
+    .pwa-container {
+      height: -webkit-fill-available;
+    }
   }
 }
 
@@ -230,6 +313,7 @@
     min-width: 48px;
   }
 
+  /* Scanline effect for buttons */
   .scanline-hover {
     position: relative;
     overflow: hidden;
@@ -374,6 +458,45 @@
     @apply grid gap-3;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
+
+  /* PWA-specific layout helpers */
+  .pwa-page {
+    @apply pwa-container bg-gradient-to-b from-stone-900 to-stone-800;
+  }
+
+  .pwa-content {
+    @apply pwa-scrollable;
+  }
+
+  .pwa-content-centered {
+    @apply pwa-scrollable flex flex-col items-center justify-center;
+  }
+
+  /* Map container optimizations */
+  .map-container {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    overflow: hidden;
+    border-radius: 12px;
+    touch-action: pan-x pan-y;
+  }
+
+  @media (max-width: 768px) {
+    .map-container {
+      height: 250px;
+    }
+  }
+
+  /* Audio player optimizations */
+  .audio-player-container {
+    position: sticky;
+    bottom: 0;
+    z-index: 40;
+    background: rgba(45, 42, 38, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(168, 181, 160, 0.1);
+  }
 }
 
 @layer utilities {
@@ -388,6 +511,22 @@
   /* Utility for preventing zoom on double tap */
   .no-zoom {
     touch-action: pan-x pan-y;
+  }
+
+  /* PWA Layout Utilities */
+  .h-screen-safe {
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  .min-h-screen-safe {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .w-screen-safe {
+    width: 100vw;
+    width: 100dvw;
   }
 
   /* Background pattern utilities */
@@ -467,6 +606,12 @@
     /* Hide browser UI when installed as PWA */
     -webkit-app-region: no-drag;
   }
+  
+  /* Ensure proper status bar handling */
+  .pwa-container {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 /* Dark mode media query support */
@@ -487,18 +632,15 @@
   }
 
   .animate-pulse,
-  .animate-ping {
+  .animate-pulse-slow,
+  .animate-logo-pulse {
     animation: none !important;
   }
-}
 
-/* Fix for iOS Safari button appearance */
-@supports (-webkit-touch-callout: none) {
   .pixel-button,
   .pixel-button-coral,
   .pixel-button-mint,
   .pixel-button-sand {
-    -webkit-appearance: none;
-    -webkit-tap-highlight-color: transparent;
+    transition: none !important;
   }
 }
