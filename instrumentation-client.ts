@@ -1,68 +1,35 @@
-// Temporarily disabled for clean build - will re-enable after
-// import * as Sentry from "@sentry/nextjs";
+// This file is for client-side Sentry initialization.
+// We are temporarily disabling it to debug a production connection issue.
 
-/**
- * Sentry Client Configuration for SoundMap
- * Temporarily disabled for clean build - will re-enable with proper setup
- */
+// import { init } from "@sentry/nextjs";
+// import { browserTracingIntegration, replayIntegration } from "@sentry/react";
+// import { SimpleSpanProcessor } from "@sentry/sdk";
+// import { OpenTelemetryInstrumentation } from "@sentry/opentelemetry";
 
-// TODO: Re-enable after clean build works
-/*
-Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  
-  // Performance monitoring
-  tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-  
-  // Session replay for debugging (only in production)
-  replaysSessionSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 0,
-  replaysOnErrorSampleRate: process.env.NODE_ENV === 'production' ? 1.0 : 0,
-  
-  // Environment tracking
-  environment: process.env.NODE_ENV,
-  
-  // Enhanced error context
-  beforeSend(event, hint) {
-    // Filter out development noise
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Sentry Event:', event);
-    }
-    
-    // Add user context if available (safely)
-    try {
-      if (typeof window !== 'undefined') {
-        const user = localStorage.getItem('soundmap_user');
-        if (user) {
-          const userData = JSON.parse(user);
-          if (userData.id) {
-            event.user = {
-              id: userData.id,
-              email: userData.email,
-            };
-          }
-        }
-      }
-    } catch (error) {
-      // Ignore localStorage errors
-    }
-    
-    return event;
-  },
-  
-  // Integration configurations
-  integrations: [
-    // Only include replay in production
-    ...(process.env.NODE_ENV === 'production' ? [
-      Sentry.replayIntegration({
-        maskAllText: true,
-        blockAllMedia: true,
-      })
-    ] : [])
-  ],
-});
-*/
+// init({
+//   // Performance Monitoring
+//   tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+//   tracePropagationTargets: ["localhost", /^https:\/\/yourserver\.io\/api/],
+//   // Session Replay
+//   replaysSessionSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 0,
+//   replaysOnErrorSampleRate: process.env.NODE_ENV === 'production' ? 1.0 : 0,
 
-console.log('🔧 SoundMap instrumentation client loaded (Sentry temporarily disabled)');
-
-// TODO: Re-enable after clean build works
-// export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
+//   // Configuration
+//   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+//   environment: process.env.NODE_ENV,
+//   enabled: process.env.NODE_ENV === 'production',
+//   integrations: [
+//     browserTracingIntegration(),
+//     replayIntegration({
+//       // Additional Replay options,
+//     }),
+//     ...(process.env.NODE_ENV === 'production' ? [
+//       new OpenTelemetryInstrumentation(),
+//     ] : []),
+//   ],
+//   instrumenter: 'otel',
+//   // An OpenTelemetry Span Processor is required for performance monitoring features
+//   // This is temporary until the fix for https://github.com/getsentry/sentry-javascript/issues/12368
+//   // is released.
+//   spanProcessors: [new SimpleSpanProcessor()],
+// });
