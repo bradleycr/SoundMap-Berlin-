@@ -26,7 +26,7 @@ const config = withPWA({
   register: true,
   skipWaiting: true,
   cleanupOutdatedCaches: true, // Clean up old caches on deploy
-  disable: true,
+  disable: false, // Re-enable PWA
   buildExcludes: [/app-build-manifest\.json$/], // Ignore problematic manifest
   runtimeCaching: [
     {
