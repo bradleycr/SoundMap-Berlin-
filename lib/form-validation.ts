@@ -111,23 +111,7 @@ export function validateEmail(email: string): ValidationResult {
   
   return validateField(email, {
     required: true,
-    pattern: emailPattern,
-    custom: (value) => {
-      const email = String(value).toLowerCase()
-      
-      // Check for common typos
-      const commonTypos = [
-        'gmail.co', 'gmail.om', 'gmai.com',
-        'yahoo.co', 'yahoo.om', 'yaho.com',
-        'hotmail.co', 'hotmail.om', 'hotmai.com'
-      ]
-      
-      if (commonTypos.some(typo => email.includes(typo))) {
-        return 'Email appears to have a typo. Please check the domain.'
-      }
-      
-      return true
-    }
+    pattern: emailPattern
   }, 'Email')
 }
 
